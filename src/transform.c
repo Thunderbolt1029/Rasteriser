@@ -6,16 +6,28 @@ float3 LocalToWorld(Transform transform, float3 point) {
     M4x4 xRot = { 1, 0, 0, 0, 0, cosf(transform.rot.x), -sinf(transform.rot.x), 0, 0, sinf(transform.rot.x), cosf(transform.rot.x), 0, 0, 0, 0, 1 };
     M4x4 yRot = { cosf(transform.rot.y), 0, sinf(transform.rot.y), 0, 0, 1, 0, 0, -sinf(transform.rot.y), 0, cosf(transform.rot.y), 0, 0, 0, 0, 1 };
     M4x4 zRot = { cosf(transform.rot.z), sinf(transform.rot.z), 0, 0, -sinf(transform.rot.z), cosf(transform.rot.z), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
-    M4x4 trans = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, transform.pos.x, transform.pos.y, transform.pos.z, 1 };
-    return Transform3(point, MatMultiply(MatMultiply(trans, xRot), MatMultiply(yRot, zRot)));
+    M4x4 combRot = MatMultiply(MatMultiply(xRot, yRot), zRot);
+
+    return Add3(Transform3(point, combRot), transform.pos);
 }
 
-float2 WorldToScreen(Camera* camera, float3 worldPoint, int width, int height) {
-    float screenHeight_world = 5;
-    float pixelsPerWorldUnit = (float)height / screenHeight_world;
+float3 WorldToLocal(Transform transform, float3 point) {
+    M4x4 xRot = { 1, 0, 0, 0, 0, cosf(transform.rot.x), sinf(transform.rot.x), 0, 0, -sinf(transform.rot.x), cosf(transform.rot.x), 0, 0, 0, 0, 1 };
+    M4x4 yRot = { cosf(transform.rot.y), 0, -sinf(transform.rot.y), 0, 0, 1, 0, 0, sinf(transform.rot.y), 0, cosf(transform.rot.y), 0, 0, 0, 0, 1 };
+    M4x4 zRot = { cosf(transform.rot.z), -sinf(transform.rot.z), 0, 0, sinf(transform.rot.z), cosf(transform.rot.z), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
+    M4x4 combRot = MatMultiply(MatMultiply(zRot, yRot), xRot);
+
+    return Transform3(Sub3(point, transform.pos), combRot);
+}
+
+float2 WorldToScreen(Camera* camera, float3 worldPoint) {
+    float3 localPoint = WorldToLocal(camera->transform, worldPoint);
+
+    float screenWidth_world = tanf(camera->fov * PI / 360) * 2;
+    float pixelsPerWorldUnit = (float)camera->target->width / screenWidth_world / localPoint.z;
     
-    float2 pixelOffset = Scale2((float2){worldPoint.x, worldPoint.y}, pixelsPerWorldUnit);
-    return Add2(Scale2((float2){(float)width, (float)height}, 0.5f), pixelOffset);
+    float2 pixelOffset = Scale2((float2){localPoint.x, localPoint.y}, pixelsPerWorldUnit);
+    return Add2(Scale2((float2){(float)camera->target->width, (float)camera->target->height}, 0.5f), pixelOffset);
 }
 
 M4x4 MatMultiply(M4x4 a, M4x4 b) {

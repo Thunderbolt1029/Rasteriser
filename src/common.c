@@ -2,32 +2,21 @@
 
 #include <stdlib.h>
 
-float2 Add2(float2 a, float2 b) { 
-    return (float2){ a.x + b.x, a.y + b.y };
-}
-float2 Sub2(float2 a, float2 b) { 
-    return (float2){ a.x - b.x, a.y - b.y };
-}
-float2 Scale2(float2 vec, float scale) {
-    return (float2){ vec.x * scale, vec.y * scale };
-}
-int Equal2(float2 a, float2 b) {
-    return a.x == b.x && a.y == b.y;
-}
-float LengthSquared2(float2 vec) {
-    return vec.x * vec.x + vec.y * vec.y;
-}
+float2 Add2(float2 a, float2 b) { return (float2){ a.x + b.x, a.y + b.y }; }
+float2 Sub2(float2 a, float2 b) { return (float2){ a.x - b.x, a.y - b.y }; }
+float2 Scale2(float2 vec, float scale) { return (float2){ vec.x * scale, vec.y * scale }; }
+int Equal2(float2 a, float2 b) { return a.x == b.x && a.y == b.y; }
+float LengthSquared2(float2 vec) { return vec.x * vec.x + vec.y * vec.y; }
+float Dot2(float2 a, float2 b) { return a.x * b.x + a.y * b.y; }
+float2 Perpendicular(float2 vec) { return (float2){ vec.y, -vec.x }; }
 
-float Dot2(float2 a, float2 b) {
-    return a.x * b.x + a.y * b.y; 
-}
-float Dot3(float3 a, float3 b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-}
+float3 Add3(float3 a, float3 b) { return (float3){ a.x + b.x, a.y + b.y, a.z + b.z }; }
+float3 Sub3(float3 a, float3 b) { return (float3){ a.x - b.x, a.y - b.y, a.z - b.z }; }
+float3 Scale3(float3 vec, float scale) { return (float3){ vec.x * scale, vec.y * scale, vec.z * scale }; }
+int Equal3(float3 a, float3 b) { return a.x == b.x && a.y == b.y && a.z == b.z; }
+float LengthSquared3(float3 vec) { return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z; }
+float Dot3(float3 a, float3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 
-float2 Perpendicular(float2 vec) {
-    return (float2){ vec.y, -vec.x };
-}
 
 float SignedTriangleArea(float2 a, float2 b, float2 c) {
     float2 ac = Sub2(c, a);

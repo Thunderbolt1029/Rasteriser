@@ -1,6 +1,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#define PI 3.14159265359
+
 typedef struct {
     float x;
     float y;
@@ -36,11 +38,16 @@ float2 Sub2(float2 a, float2 b);
 float2 Scale2(float2 vec, float scale);
 int Equal2(float2 a, float2 b);
 float LengthSquared2(float2 vec);
-
 float Dot2(float2, float2);
+float2 Perpendicular(float2);
+
+float3 Add3(float3 a, float3 b);
+float3 Sub3(float3 a, float3 b);
+float3 Scale3(float3 vec, float scale);
+int Equal3(float3 a, float3 b);
+float LengthSquared3(float3 vec);
 float Dot3(float3, float3);
 
-float2 Perpendicular(float2);
 
 float SignedTriangleArea(float2, float2, float2);
 int PointInTriangle(float2 p, float2 a, float2 b, float2 c);
