@@ -50,7 +50,7 @@ float Dot3(float3, float3);
 
 
 float SignedTriangleArea(float2, float2, float2);
-int PointInTriangle(float2 p, float2 a, float2 b, float2 c);
+int PointInTriangle(float2 p, float2 a, float2 b, float2 c, float3 *weights);
 
 int randInt(int min, int max);
 float clamp(float d, float min, float max);

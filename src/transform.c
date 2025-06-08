@@ -61,3 +61,27 @@ float3 Transform3(float3 vec, M4x4 a) {
         vec.x * a._02 + vec.y * a._12 + vec.z * a._22 + a._32,
     };
 }
+
+Camera *CreateCamera(int width, int height, float fov, float maxDistance) {
+    Camera *cam = malloc(sizeof(Camera));
+
+    cam->target = CreateImage(width, height);
+
+    cam->depth = malloc(sizeof(float*) * width);
+    for (int i = 0; i < width; i++)
+        cam->depth[i] = malloc(sizeof(float) * height);    
+    for (int x = 0; x < width; x++)
+        for (int y = 0; y < height; y++)
+            cam->depth[x][y] = maxDistance;
+
+    cam->transform = (Transform){ 0, 0, 0, 0, 0, 0 };
+    cam->fov = fov;
+    cam->maxDistance = maxDistance;
+
+    return cam;
+}
+void DestroyCamera(Camera *camera) {
+    free(camera->target);
+    free(camera->depth);
+    free(camera);
+}

@@ -11,14 +11,20 @@ typedef struct {
 
 typedef struct {
     Texture *target;
+    float **depth;
     Transform transform;
     float fov;
+    float maxDistance;
 } Camera;
 
 float3 LocalToWorld(Transform transform, float3 point);
+float3 WorldToLocal(Transform transform, float3 point);
 float2 WorldToScreen(Camera* camera, float3 worldPoint);
 
 float3 Transform3(float3 vec, M4x4 a);
 M4x4 MatMultiply(M4x4, M4x4);
+
+Camera *CreateCamera(int width, int height, float fov, float maxDistance);
+void DestroyCamera(Camera *camera);
 
 #endif

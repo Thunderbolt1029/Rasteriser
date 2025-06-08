@@ -24,11 +24,16 @@ float SignedTriangleArea(float2 a, float2 b, float2 c) {
     return Dot2(ac, abPerp) / 2.f;
 }
 
-int PointInTriangle(float2 p, float2 a, float2 b, float2 c) {
+int PointInTriangle(float2 p, float2 a, float2 b, float2 c, float3 *weights) {
     float areaABP = SignedTriangleArea(a, b, p);
     float areaBCP = SignedTriangleArea(b, c, p);
     float areaCAP = SignedTriangleArea(c, a, p);
     int inTri = areaABP >= 0 && areaBCP >= 0 && areaCAP >= 0;
+
+    if (weights != NULL) {
+        float invAreaSum = 1 / (areaABP + areaBCP + areaCAP);
+        *weights = (float3){ areaBCP*invAreaSum, areaCAP*invAreaSum, areaABP*invAreaSum };
+    }
 
     return inTri;
 }

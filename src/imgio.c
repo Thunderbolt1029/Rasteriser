@@ -1,7 +1,7 @@
 #include "imgio.h"
 
-void SaveBMP(Texture *texture) {
-    FILE *fptr = fopen("out.bmp", "w+");
+void SaveBMP(Texture *texture, char* fileName) {
+    FILE *fptr = fopen(fileName, "w+");
     
     char tag[] = { 'B', 'M' };
     uint32_t header[] = {
