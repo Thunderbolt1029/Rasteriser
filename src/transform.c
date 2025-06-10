@@ -20,14 +20,15 @@ float3 WorldToLocal(Transform transform, float3 point) {
     return Transform3(Sub3(point, transform.pos), combRot);
 }
 
-float2 WorldToScreen(Camera* camera, float3 worldPoint) {
+float3 WorldToScreen(Camera* camera, float3 worldPoint) {
     float3 localPoint = WorldToLocal(camera->transform, worldPoint);
 
     float screenWidth_world = tanf(camera->fov * PI / 360) * 2;
     float pixelsPerWorldUnit = (float)camera->target->width / screenWidth_world / localPoint.z;
     
-    float2 pixelOffset = Scale2((float2){localPoint.x, localPoint.y}, pixelsPerWorldUnit);
-    return Add2(Scale2((float2){(float)camera->target->width, (float)camera->target->height}, 0.5f), pixelOffset);
+    float2 pixelOffset = Scale2(IgnoreZ(localPoint), pixelsPerWorldUnit);
+    float3 depthOffset = { pixelOffset.x, pixelOffset.y, localPoint.z };
+    return Add3(Scale3((float3){(float)camera->target->width, (float)camera->target->height, 0}, 0.5f), depthOffset);
 }
 
 M4x4 MatMultiply(M4x4 a, M4x4 b) {

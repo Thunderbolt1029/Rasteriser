@@ -12,6 +12,8 @@ typedef struct {
     Transform transform;
     int triCount;
     Tri *tris;
+    Texture *texture;
+    Pixel colour;
 } Object;
 
 Object* LoadObjFile(char* objFileName);

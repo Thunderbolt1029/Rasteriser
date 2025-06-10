@@ -1,6 +1,7 @@
 #include "common.h"
 
 #include <stdlib.h>
+#include <math.h>
 
 float2 Add2(float2 a, float2 b) { return (float2){ a.x + b.x, a.y + b.y }; }
 float2 Sub2(float2 a, float2 b) { return (float2){ a.x - b.x, a.y - b.y }; }
@@ -15,8 +16,26 @@ float3 Sub3(float3 a, float3 b) { return (float3){ a.x - b.x, a.y - b.y, a.z - b
 float3 Scale3(float3 vec, float scale) { return (float3){ vec.x * scale, vec.y * scale, vec.z * scale }; }
 int Equal3(float3 a, float3 b) { return a.x == b.x && a.y == b.y && a.z == b.z; }
 float LengthSquared3(float3 vec) { return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z; }
+float Length3(float3 vec) { return sqrtf(LengthSquared3(vec)); }
 float Dot3(float3 a, float3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+float3 Inverse3(float3 vec) { return (float3){1/vec.x, 1/vec.y, 1/vec.z}; }
+float3 Normalise(float3 vec) {  return Scale3(vec, Length3(vec)); }
+Pixel Vec3ToColour(float3 vec) {
+    return (Pixel){ 
+        clamp(vec.x, 0, 1) * 255,
+        clamp(vec.y, 0, 1) * 255,
+        clamp(vec.z, 0, 1) * 255,
+    };
+}
+float3 ColourToVec3(Pixel col) {
+    return (float3){
+        clamp((float)col.red / 255.f, 0, 1),
+        clamp((float)col.green / 255.f, 0, 1),
+        clamp((float)col.blue / 255.f, 0, 1)
+    };
+}
 
+float2 IgnoreZ(float3 vec) { return (float2){ vec.x, vec.y }; }
 
 float SignedTriangleArea(float2 a, float2 b, float2 c) {
     float2 ac = Sub2(c, a);

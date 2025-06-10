@@ -1,7 +1,12 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#include "imgio.h"
+
 #define PI 3.14159265359
+
+#define ZERO2 (float2){0,0}
+#define ZERO3 (float3){0,0,0}
 
 typedef struct {
     float x;
@@ -47,7 +52,12 @@ float3 Scale3(float3 vec, float scale);
 int Equal3(float3 a, float3 b);
 float LengthSquared3(float3 vec);
 float Dot3(float3, float3);
+float3 Inverse3(float3);
+float3 Normalise(float3);
+Pixel Vec3ToColour(float3);
+float3 ColourToVec3(Pixel col);
 
+float2 IgnoreZ(float3 vec);
 
 float SignedTriangleArea(float2, float2, float2);
 int PointInTriangle(float2 p, float2 a, float2 b, float2 c, float3 *weights);

@@ -1,7 +1,10 @@
 #include "imgio.h"
 
-void SaveBMP(Texture *texture, char* fileName) {
+int SaveBMP(Texture *texture, char* fileName) {
     FILE *fptr = fopen(fileName, "w+");
+    if (fptr == NULL) {
+        return -1;
+    }
     
     char tag[] = { 'B', 'M' };
     uint32_t header[] = {
@@ -32,6 +35,8 @@ void SaveBMP(Texture *texture, char* fileName) {
         }
 
     fclose(fptr);
+
+    return 0;
 }
 
 void TestImage(Texture *texture) {

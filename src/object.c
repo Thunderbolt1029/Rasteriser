@@ -16,6 +16,8 @@ Object* LoadObjFile(char* objFileName) {
     int triCount = 0;
     Object *obj = malloc(sizeof(Object));
     obj->transform = (Transform){ 0, 0, 0, 0, 0, 0 };
+    obj->texture = NULL;
+    obj->colour = (Pixel){255,255,255};
 
     char *line = NULL;
     size_t len = 0;
@@ -76,7 +78,7 @@ Object* LoadObjFile(char* objFileName) {
                 triStack[triSP++] = (struct triStackElement){
                     *(float3*)ListGet(vertexList, v), 
                     *(float3*)ListGet(normalList, n), 
-                    *(float2*)ListGet(textureList, t)
+                    t == -1 ? ZERO2 : *(float2*)ListGet(textureList, t)
                 };
 
                 if (triSP == 3) {
@@ -125,8 +127,14 @@ Object* LoadObjFile(char* objFileName) {
 char* ReadVertex(char* s, int* v, int* t, int* n) {
     char *next;
     *v = strtol(s, &next, 10) - 1;
-    *t = strtol(next+1, &next, 10) - 1;
-    *n = strtol(next+1, &next, 10) - 1;
+    if (next[1] == '/') { 
+        *t = -1;
+        *n = strtol(next+2, &next, 10) - 1;
+    }
+    else {
+        *t = strtol(next+1, &next, 10) - 1;
+        *n = strtol(next+1, &next, 10) - 1;
+    }
     return next;
 }
 
