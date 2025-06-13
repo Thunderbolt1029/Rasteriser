@@ -58,7 +58,7 @@ Object* LoadObjFile(char* objFileName) {
                 ListAdd(normalList, normal);
                 break;
             case 't':
-                float3 *texture = malloc(sizeof(float2));
+                float2 *texture = malloc(sizeof(float2));
                 texture->x = strtof(line+3, &next);
                 texture->y = strtof(next, NULL);
                 ListAdd(textureList, texture);

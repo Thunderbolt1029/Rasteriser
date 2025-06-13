@@ -16,6 +16,7 @@ typedef struct {
     Pixel** image;
 } Texture;
 
+Texture* ReadBMP(char* fileName);
 int SaveBMP(Texture *texture, char* fileName);
 void TestImage(Texture *texture);
 Texture* CreateImage(int width, int height);

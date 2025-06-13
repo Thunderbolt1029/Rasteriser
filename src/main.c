@@ -20,10 +20,7 @@ int main(int argc, char *argv[]) {
 
     Object* cube = LoadObjFile("assets/cube.obj");
     cube->transform = (Transform){0, 0, 3, .5, -.5, 0};
-    cube->texture = CreateImage(64, 64);
-    for (int x = 0; x < 64; x++)
-    for (int y = 0; y < 64; y++)
-        cube->texture->image[x][y] = (x + y) % 2 ? (Pixel){255,0,255} : (Pixel){50,50,50};
+    cube->texture = ReadBMP("assets/CubeBoundsTexture.bmp");
 
     Object* monkey = LoadObjFile("assets/monkey.obj");
     monkey->transform = (Transform){0, 0, 2, .3, PI + .3, 0};
@@ -64,24 +61,25 @@ void RenderObject(Camera* camera, Object* object) {
         for (int x = floor(minX); x < ceil(maxX); x++)
         for (int y = floor(minY); y < ceil(maxY); y++) {
             float3 weights;
+            
             if (!PointInTriangle((float2){(float)x, (float)y}, IgnoreZ(a), IgnoreZ(b), IgnoreZ(c), &weights)) continue;
-
+            
             float depth = 1/Dot3(Inverse3((float3){ a.z, b.z, c.z }), weights);
             if (depth < 0 || camera->depth[x][y] < depth) continue;
-
+            
             float2 texture = ZERO2;
             texture = Add2(texture, Scale2(object->tris[i].texture[0], weights.x / a.z));
             texture = Add2(texture, Scale2(object->tris[i].texture[1], weights.y / b.z));
             texture = Add2(texture, Scale2(object->tris[i].texture[2], weights.z / c.z));
             texture = Scale2(texture, depth);
-
+            
             float3 normal = ZERO3;
             normal = Add3(normal, Scale3(object->tris[i].normal[0], weights.x / a.z));
             normal = Add3(normal, Scale3(object->tris[i].normal[1], weights.y / b.z));
             normal = Add3(normal, Scale3(object->tris[i].normal[2], weights.z / c.z));
             normal = Scale3(normal, depth);
             normal = Normalise(normal);
-
+            
             camera->target->image[x][y] = PixelColour(object, texture, normal);
             camera->depth[x][y] = depth;
         }
@@ -108,16 +106,15 @@ void DepthVisualisation(Camera *cam, char* fileName) {
 }
 
 Pixel PixelColour(Object* object, float2 texture, float3 normal) {
-    // Half lambert
     float lightIntensity = (Dot3(normal, (float3){0, 1, 0}) + 1) * 0.5;
-
+    
     Pixel colour;
     if (object->texture == NULL) 
-        colour = object->colour;
+    colour = object->colour;
     else {
         int x, y;
-        x = (int)clamp(texture.x * (float)object->texture->width, 0, object->texture->width);
-        y = (int)clamp(texture.y * (float)object->texture->height, 0, object->texture->height);
+        x = (int)clamp((1-texture.x) * (float)(object->texture->width-1), 0, object->texture->width-1);
+        y = (int)clamp(texture.y * (float)(object->texture->height-1), 0, object->texture->height-1);
         colour = object->texture->image[x][y];
     }
 

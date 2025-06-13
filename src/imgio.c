@@ -1,5 +1,41 @@
 #include "imgio.h"
 
+Texture* ReadBMP(char* fileName) {
+    FILE *fptr = fopen(fileName, "r");
+    if (fptr == NULL) {
+        return NULL;
+    }
+
+    char tag[2];
+    fread(&tag, sizeof(tag), 1, fptr);
+
+    if (tag[0] != 'B' || tag[1] != 'M')
+        return NULL;
+
+    fseek(fptr, 0x0A, SEEK_SET);
+
+    int pixelOffset;
+    fread(&pixelOffset, sizeof(int32_t), 1, fptr);
+
+    fseek(fptr, sizeof(uint32_t), SEEK_CUR);
+
+    int width, height;
+    fread(&width, sizeof(int32_t), 1, fptr);
+    fread(&height, sizeof(int32_t), 1, fptr);
+
+    fseek(fptr, pixelOffset, SEEK_SET);
+
+    Texture* texture = CreateImage(width, height);
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++) {
+        uint8_t data[4];
+        fread(&data, sizeof(data), 1, fptr);
+        texture->image[x][y] = (Pixel){data[2], data[1], data[0]};
+    }
+
+    return texture;
+}
+
 int SaveBMP(Texture *texture, char* fileName) {
     FILE *fptr = fopen(fileName, "w+");
     if (fptr == NULL) {
