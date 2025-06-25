@@ -21,6 +21,7 @@ float3 LocalToWorld(Transform transform, float3 point);
 float3 WorldToLocal(Transform transform, float3 point);
 float3 WorldToScreen(Camera* camera, float3 worldPoint);
 
+float3 Rotate3(float3 vec, float3 rot);
 float3 Transform3(float3 vec, M4x4 a);
 M4x4 MatMultiply(M4x4, M4x4);
 

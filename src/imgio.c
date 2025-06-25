@@ -27,7 +27,7 @@ Texture* ReadBMP(char* fileName) {
 
     Texture* texture = CreateImage(width, height);
     for (int y = 0; y < height; y++)
-        for (int x = 0; x < width; x++) {
+    for (int x = 0; x < width; x++) {
         uint8_t data[4];
         fread(&data, sizeof(data), 1, fptr);
         texture->image[x][y] = (Pixel){data[2], data[1], data[0]};
@@ -60,15 +60,15 @@ int SaveBMP(Texture *texture, char* fileName) {
     fwrite(&header, sizeof(header), 1, fptr);
 
     for (int y = 0; y < texture->height; y++)
-        for (int x = 0; x < texture->width; x++) {
-            uint8_t pixel[] = {
-                texture->image[x][y].blue,
-                texture->image[x][y].green,
-                texture->image[x][y].red,
-                0
-            };
-            fwrite(&pixel, sizeof(pixel), 1, fptr);
-        }
+    for (int x = 0; x < texture->width; x++) {
+        uint8_t pixel[] = {
+            texture->image[x][y].blue,
+            texture->image[x][y].green,
+            texture->image[x][y].red,
+            0
+        };
+        fwrite(&pixel, sizeof(pixel), 1, fptr);
+    }
 
     fclose(fptr);
 
