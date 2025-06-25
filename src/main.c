@@ -53,6 +53,8 @@ void RenderObject(Camera* camera, Object* object) {
         float3 b = WorldToScreen(camera, LocalToWorld(object->transform, object->tris[i].vertex[1]));
         float3 c = WorldToScreen(camera, LocalToWorld(object->transform, object->tris[i].vertex[2]));
 
+        if (a.z <= 0 || b.z <= 0 || c.z <= 0) continue;
+
         float minX = clamp(fminf(fminf(a.x, b.x), c.x), 0, camera->target->width);
         float minY = clamp(fminf(fminf(a.y, b.y), c.y), 0, camera->target->height);
         float maxX = clamp(fmaxf(fmaxf(a.x, b.x), c.x), 0, camera->target->width);
@@ -65,7 +67,7 @@ void RenderObject(Camera* camera, Object* object) {
             if (!PointInTriangle((float2){(float)x, (float)y}, IgnoreZ(a), IgnoreZ(b), IgnoreZ(c), &weights)) continue;
             
             float depth = 1/Dot3(Inverse3((float3){ a.z, b.z, c.z }), weights);
-            if (depth < 0 || camera->depth[x][y] < depth) continue;
+            if (camera->depth[x][y] < depth) continue;
             
             float2 texture = ZERO2;
             texture = Add2(texture, Scale2(object->tris[i].texture[0], weights.x / a.z));
@@ -79,6 +81,7 @@ void RenderObject(Camera* camera, Object* object) {
             normal = Add3(normal, Scale3(object->tris[i].normal[2], weights.z / c.z));
             normal = Scale3(normal, depth);
             normal = Normalise(normal);
+            normal = Rotate3(normal, object->transform.rot);
             
             camera->target->image[x][y] = PixelColour(object, texture, normal);
             camera->depth[x][y] = depth;
@@ -88,14 +91,14 @@ void RenderObject(Camera* camera, Object* object) {
 
 void DepthVisualisation(Camera *cam, char* fileName) {
     float min = cam->maxDistance, max = 0;
-    for (int x = 0; x < 1080; x++)
-    for (int y = 0; y < 720; y++) {
+    for (int x = 0; x < cam->target->width; x++)
+    for (int y = 0; y < cam->target->height; y++) {
         if (cam->depth[x][y] < min) min = cam->depth[x][y];
         if (cam->depth[x][y] > max && cam->depth[x][y] < cam->maxDistance) max = cam->depth[x][y];
     }
-    Texture* texture = CreateImage(1080, 720);
-    for (int x = 0; x < 1080; x++)
-    for (int y = 0; y < 720; y++) {
+    Texture* texture = CreateImage(cam->target->width, cam->target->height);
+    for (int x = 0; x < cam->target->width; x++)
+    for (int y = 0; y < cam->target->height; y++) {
         float col;
         if (cam->depth[x][y] == cam->maxDistance) col = 0.2;
         else col = (cam->depth[x][y] - min) / (max - min);
@@ -107,16 +110,34 @@ void DepthVisualisation(Camera *cam, char* fileName) {
 
 Pixel PixelColour(Object* object, float2 texture, float3 normal) {
     float lightIntensity = (Dot3(normal, (float3){0, 1, 0}) + 1) * 0.5;
+    lightIntensity = lerp(0, 1, lightIntensity);
     
     Pixel colour;
     if (object->texture == NULL) 
-    colour = object->colour;
+        colour = object->colour;
     else {
-        int x, y;
-        x = (int)clamp((1-texture.x) * (float)(object->texture->width-1), 0, object->texture->width-1);
-        y = (int)clamp(texture.y * (float)(object->texture->height-1), 0, object->texture->height-1);
+        float u = 1-texture.x; // scale by texture scale in future
+        float v = texture.y; // * object->textureScale ?
+
+        int x = (int)roundf((u - floorf(u)) * (object->texture->width-1));
+        int y = (int)roundf((v - floorf(v)) * (object->texture->height-1));
+
+        x = clamp(x, 0, object->texture->width-1);
+        y = clamp(y, 0, object->texture->height-1);
+
         colour = object->texture->image[x][y];
     }
 
     return Vec3ToColour(Scale3(ColourToVec3(colour), lightIntensity));
 }
+
+/*
+float u = texCoord.x * TextureScale;
+float v = texCoord.y * TextureScale
+
+// Calculate indices of nearest texel to sample point
+int x = (int)((u - floorf(u)) * (object->texture->width-1));
+int y = (int)((v - floorf(v)) * (object->texture->height-1));
+
+colour image[x, y];
+*/

@@ -64,3 +64,7 @@ float clamp(float d, float min, float max) {
     const float t = d < min ? min : d;
     return t > max ? max : t;
 }
+float lerp(float x, float y, float t) {
+    t = clamp(t, 0, 1);
+    return y * t + x * (1-t);
+}

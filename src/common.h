@@ -64,5 +64,6 @@ int PointInTriangle(float2 p, float2 a, float2 b, float2 c, float3 *weights);
 
 int randInt(int min, int max);
 float clamp(float d, float min, float max);
+float lerp(float x, float y, float t);
 
 #endif
