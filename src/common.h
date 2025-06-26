@@ -3,7 +3,7 @@
 
 #include "imgio.h"
 
-#define PI 3.14159265359
+#define PI 3.14159265358979323846f
 
 #define ZERO2 (float2){0,0}
 #define ZERO3 (float3){0,0,0}
