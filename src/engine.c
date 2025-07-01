@@ -1,37 +1,31 @@
 #include "engine.h"
 #include <math.h>
 #include "raylibWrap.h"
+#include <time.h>
+#include <stdio.h>
 
 #include "imgio.h"
 
 void Flatten(Pixel** TD, Color* OD, int width, int height);
-void ClearTexture(Texture* texture);
 
 void Run(Scene* scene) {
-    SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
-	InitWindow(scene->camera->target->width, scene->camera->target->height, "Test");
+    SetConfigFlags(/*FLAG_VSYNC_HINT | */FLAG_WINDOW_HIGHDPI);
+	InitWindow(1620, 1080, "Rasteriser");
+	// InitWindow(scene->camera->target->width, scene->camera->target->height, "Rasteriser");
 
     Texture2D texture = LoadTextureFromImage(GenImageColor(scene->camera->target->width, scene->camera->target->height, BLACK));
     SetTextureFilter(texture, TEXTURE_FILTER_POINT);
 
     Color *texColBuffer = MemAlloc(sizeof(Color) * scene->camera->target->width * scene->camera->target->height);
 
-    int pos[2] = {100, 100};
-
 	while (!WindowShouldClose())
 	{
         // Update Scene
         (*scene->Update)(GetFrameTime());
-
+                
         // Render Scene to target
-        ClearTexture(scene->camera->target);
+        ClearCamera(scene->camera);
         RenderScene(scene);
-
-        // for (int x = 0; x < scene->camera->target->width; x++)
-        // for (int y = 0; y < scene->camera->target->height; y++) {
-        //     target[x][y] = (float3){(float)x/scene->camera->target->width, (float)y/scene->camera->target->height, 0};
-        // }
-        // target[pos[0]][pos[1]] = (float3){1, 1, 1};
 
         Flatten(scene->camera->target->image, texColBuffer, scene->camera->target->width, scene->camera->target->height);
         UpdateTexture(texture, texColBuffer);
@@ -44,6 +38,15 @@ void Run(Scene* scene) {
         BeginDrawing();
         DrawTexturePro(texture, src, dest, origin, 0.0f, WHITE);
         DrawFPS(10, 10);
+        DrawText(TextFormat("pos: %f %f %f\nrot: %f %f %f", 
+                scene->camera->transform.pos.x,
+                scene->camera->transform.pos.y,
+                scene->camera->transform.pos.z,
+                scene->camera->transform.rot.x,
+                scene->camera->transform.rot.y,
+                scene->camera->transform.rot.z
+            ), 10, 40, 20, LIME
+        );
 		EndDrawing();
 	}
 
@@ -63,10 +66,4 @@ void Flatten(Pixel** TD, Color* OD, int width, int height) {
             255
         };
     }
-}
-
-void ClearTexture(Texture* texture) {
-    for (int x = 0; x < texture->width; x++)
-    for (int y = 0; y < texture->height; y++)
-        texture->image[x][y] = (Pixel) { 0, 0, 0 };
 }

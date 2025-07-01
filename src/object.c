@@ -6,7 +6,7 @@
 #include "object.h"
 #include "list.h"
 
-Object* LoadObjFile(char* objFileName) {
+Object* LoadObjFile(const char* objFileName) {
     FILE *fptr = fopen(objFileName, "r");
     if (fptr == NULL) {
         fclose(fptr);
@@ -15,9 +15,10 @@ Object* LoadObjFile(char* objFileName) {
 
     int triCount = 0;
     Object *obj = malloc(sizeof(Object));
-    obj->transform = (Transform){ 0, 0, 0, 0, 0, 0 };
+    obj->transform = (Transform){ 0, 0, 0, 0, 0, 0, 1 };
     obj->texture = NULL;
     obj->colour = (Pixel){255,255,255};
+    obj->fileName = objFileName;
 
     char *line = NULL;
     size_t len = 0;

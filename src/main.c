@@ -7,46 +7,70 @@
 
 void Update(float deltaTime);
 
-Camera *cam;
-Object *cube, *monkey, *dragon;
+#define MOVE_SPEED 10
+#define TURN_SPEED 1
+
+Camera *camera;
+Object *cube, *monkey, *dragon, *plane, *grid;
 
 int main() 
 {
     // srand(time(NULL));
-    cam = CreateCamera(1080, 720, 90, 1000);
+    camera = CreateCamera(540, 360, 90, 1000);
     
+    /*
     cube = LoadObjFile("assets/cube.obj");
-    cube->transform = (Transform){0, 1.5, 5, .5, -.5, 0};
+    cube->transform = (Transform){0, 0, 3, .5, -.5, 0, 1};
     cube->texture = ReadBMP("assets/CubeBoundsTexture.bmp");
     
     monkey = LoadObjFile("assets/monkey.obj");
-    monkey->transform = (Transform){-3, 0, 5, .3, PI + .3, 0};
+    monkey->transform = (Transform){-3, 0, 5, .3, PI + .3, 0, 1};
     
     dragon = LoadObjFile("assets/dragon.obj");
-    dragon->transform = (Transform){4, 0, 5, 0, PI / 2, 0};
+    dragon->transform = (Transform){0, 0, 0.7, 0, PI / 2, 0, 1};
+
+    grid = LoadObjFile("assets/grid.obj");
+    grid->transform = (Transform){0, -3, 5, 0, 0, 0, 10};
+    */
+    
+    plane = LoadObjFile("assets/plane.obj");
+    plane->transform = (Transform){0, -3, 5, 0, 0, 0, 10};
     
     Scene *scene = malloc(sizeof(Scene));
     scene->Update = &Update;
-    scene->camera = cam;
-    scene->NoObjects = 3;
+    scene->camera = camera;
+    scene->NoObjects = 1;
     scene->objects = malloc(sizeof(Object) * scene->NoObjects);
-    scene->objects[0] = cube;
-    scene->objects[1] = monkey;
-    scene->objects[2] = dragon;
-    
+    // scene->objects[0] = cube;
+    // scene->objects[1] = monkey;
+    // scene->objects[2] = dragon;
+    scene->objects[0] = plane;
+
     Run(scene);
 
-    DestroyCamera(cam);
-    FreeObject(cube);
-    FreeObject(monkey);
-    FreeObject(dragon);
+    DestroyCamera(camera);
+    // FreeObject(cube);
+    // FreeObject(monkey);
+    // FreeObject(dragon);
+    FreeObject(plane);
+    // FreeObject(grid);
 
 	return 0;
 }
 
 void Update(float deltaTime) {
-    if (IsKeyDown(KEY_W)) cam->transform.pos.z++;
-    if (IsKeyDown(KEY_S)) cam->transform.pos.z--;
-    if (IsKeyDown(KEY_A)) cam->transform.pos.x--;
-    if (IsKeyDown(KEY_D)) cam->transform.pos.x++;
+    float3 MoveDir = ZERO3;
+
+    if (IsKeyDown(KEY_W)) MoveDir.z++;
+    if (IsKeyDown(KEY_S)) MoveDir.z--;
+    if (IsKeyDown(KEY_A)) MoveDir.x--;
+    if (IsKeyDown(KEY_D)) MoveDir.x++;
+    MoveDir = Normalise3(MoveDir);
+    MoveDir = Rotate3(MoveDir, (float3){0, camera->transform.rot.y, 0});
+    camera->transform.pos = Add3(camera->transform.pos, Scale3(MoveDir, MOVE_SPEED * deltaTime));
+
+    if (IsKeyDown(KEY_LEFT)) camera->transform.rot.y += TURN_SPEED * deltaTime;
+    if (IsKeyDown(KEY_RIGHT)) camera->transform.rot.y -= TURN_SPEED * deltaTime;
+    if (IsKeyDown(KEY_UP)) camera->transform.rot.x += TURN_SPEED * deltaTime;
+    if (IsKeyDown(KEY_DOWN)) camera->transform.rot.x -= TURN_SPEED * deltaTime;
 }

@@ -10,6 +10,9 @@ int Equal2(float2 a, float2 b) { return a.x == b.x && a.y == b.y; }
 float LengthSquared2(float2 vec) { return vec.x * vec.x + vec.y * vec.y; }
 float Dot2(float2 a, float2 b) { return a.x * b.x + a.y * b.y; }
 float2 Perpendicular(float2 vec) { return (float2){ vec.y, -vec.x }; }
+float2 Lerp2(float2 a, float2 b, float t) {
+    return (float2){lerp(a.x, b.x, t), lerp(a.y, b.y, t)};
+}
 
 float3 Add3(float3 a, float3 b) { return (float3){ a.x + b.x, a.y + b.y, a.z + b.z }; }
 float3 Sub3(float3 a, float3 b) { return (float3){ a.x - b.x, a.y - b.y, a.z - b.z }; }
@@ -19,7 +22,7 @@ float LengthSquared3(float3 vec) { return vec.x * vec.x + vec.y * vec.y + vec.z 
 float Length3(float3 vec) { return sqrtf(LengthSquared3(vec)); }
 float Dot3(float3 a, float3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 float3 Inverse3(float3 vec) { return (float3){1/vec.x, 1/vec.y, 1/vec.z}; }
-float3 Normalise(float3 vec) {  return Scale3(vec, Length3(vec)); }
+float3 Normalise3(float3 vec) {  return Scale3(vec, Length3(vec)); }
 Pixel Vec3ToColour(float3 vec) {
     return (Pixel){ 
         clamp(vec.x, 0, 1) * 255,
@@ -33,6 +36,9 @@ float3 ColourToVec3(Pixel col) {
         clamp((float)col.green / 255.f, 0, 1),
         clamp((float)col.blue / 255.f, 0, 1)
     };
+}
+float3 Lerp3(float3 a, float3 b, float t) {
+    return (float3){lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t)};
 }
 
 float2 IgnoreZ(float3 vec) { return (float2){ vec.x, vec.y }; }

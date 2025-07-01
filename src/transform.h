@@ -7,6 +7,7 @@
 typedef struct {
     float3 pos;
     float3 rot;
+    float scale;
 } Transform;
 
 typedef struct {
@@ -27,5 +28,7 @@ M4x4 MatMultiply(M4x4, M4x4);
 
 Camera *CreateCamera(int width, int height, float fov, float maxDistance);
 void DestroyCamera(Camera *camera);
+
+void ClearCamera(Camera *camera);
 
 #endif

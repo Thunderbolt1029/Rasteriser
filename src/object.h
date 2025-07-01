@@ -9,6 +9,7 @@ typedef struct {
     float2 texture[3];
 } Tri;
 typedef struct {
+    const char *fileName;
     Transform transform;
     int triCount;
     Tri *tris;
@@ -16,7 +17,7 @@ typedef struct {
     Pixel colour;
 } Object;
 
-Object* LoadObjFile(char* objFileName);
+Object* LoadObjFile(const char* objFileName);
 char* ReadVertex(char* s, int* v, int* t, int* n);
 void FreeObject(Object* object);
 
