@@ -18,10 +18,10 @@ Tri triToScreen(Camera *camera, Transform transform, Tri tri, Tri *viewTri);
 #define NEAR_CLIP_DIST 0.01f
 
 void RenderScene(Scene* scene) {
-    // clock_t t = clock(); 
+    clock_t t = clock(); 
     for (int i = 0; i < scene->NoObjects; i++) {
         RenderObject(scene->camera, scene->objects[i]);
-        // t = clock() - t; 
+        t = clock() - t; 
         // printf("%s %f\n", scene->objects[i]->fileName, 1/(((double)t)/CLOCKS_PER_SEC)); 
     }
     // printf("\n");
@@ -35,7 +35,6 @@ void RenderObject(Camera* camera, Object* object) {
         int clip0 = screenTri.vertex[0].z <= 0;
         int clip1 = screenTri.vertex[1].z <= 0;
         int clip2 = screenTri.vertex[2].z <= 0;
-        object->colour = (clip0 + clip1 + clip2 == 0) ? (Pixel){255,0,0} : (clip0 + clip1 + clip2 == 1) ? (Pixel){0,255,0} : (Pixel){0,0,255};
 
         int indexClip, indexNonClip, indexNext, indexPrev;
         float3 pointA, pointB, pointClipped, pointNotClipped, clipPointAlongEdgeA, clipPointAlongEdgeB;
@@ -159,7 +158,6 @@ void RenderPixel(int x, int y, Camera *camera, Object *object, Tri screenTri) {
     normal = Rotate3(normal, object->transform.rot);
     
     camera->target->image[x][y] = PixelColour(object, texture, normal);
-    // camera->target->image[x][y] = Vec3ToColour(weights);
     camera->depth[x][y] = depth;
 }
 
