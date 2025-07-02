@@ -10,10 +10,10 @@
 #include "transform.h"
 
 void RenderObject(Camera *camera, Object* object);
-void RenderTri(Tri screenTri, Camera *camera, Object *object, int sum);
+void RenderTri(Tri screenTri, Camera *camera, Object *object);
 void RenderPixel(int x, int y, Camera *camera, Object *object, Tri screenTri);
 Pixel PixelColour(Object* object, float2 texture, float3 normal);
-Tri triToScreen(Camera *camera, Transform transform, Tri tri);
+Tri triToScreen(Camera *camera, Transform transform, Tri tri, Tri *viewTri);
 
 #define NEAR_CLIP_DIST 0.01f
 
@@ -29,81 +29,98 @@ void RenderScene(Scene* scene) {
 
 void RenderObject(Camera* camera, Object* object) {
     for (int i = 0; i < object->triCount; i++) {
-        Tri screenTri = triToScreen(camera, object->transform, object->tris[i]);
+        Tri viewTri;
+        Tri screenTri = triToScreen(camera, object->transform, object->tris[i], &viewTri);
 
         int clip0 = screenTri.vertex[0].z <= 0;
         int clip1 = screenTri.vertex[1].z <= 0;
         int clip2 = screenTri.vertex[2].z <= 0;
+        object->colour = (clip0 + clip1 + clip2 == 0) ? (Pixel){255,0,0} : (clip0 + clip1 + clip2 == 1) ? (Pixel){0,255,0} : (Pixel){0,0,255};
+
+        int indexClip, indexNonClip, indexNext, indexPrev;
+        float3 pointA, pointB, pointClipped, pointNotClipped, clipPointAlongEdgeA, clipPointAlongEdgeB;
+        float fracA, fracB;
+        Tri rastTri;
 
         switch (clip0 + clip1 + clip2) {
         case 0:
-            RenderTri(screenTri, camera, object, clip0 + clip1 + clip2);
+            RenderTri(screenTri, camera, object);
             break;
         case 1:
             // Figure out which point is to be clipped, and the two that will remain
-            int indexClip = clip0 ? 0 : clip1 ? 1 : 2;
-            int indexNext = (indexClip + 1) % 3;
-            int indexPrev = (indexClip - 1 + 3) % 3;
-            float3 pointClipped = screenTri.vertex[indexClip];
-            float3 pointA = screenTri.vertex[indexNext];
-            float3 pointB = screenTri.vertex[indexPrev];
+            indexClip = clip0 ? 0 : clip1 ? 1 : 2;
+            indexNext = (indexClip + 1) % 3;
+            indexPrev = (indexClip - 1 + 3) % 3;
+
+            pointClipped = viewTri.vertex[indexClip];
+            pointA = viewTri.vertex[indexNext];
+            pointB = viewTri.vertex[indexPrev];
 
             // Fraction along triangle edge at which the depth is equal to the clip distance
-            float fracA = (NEAR_CLIP_DIST - pointClipped.z) / (pointA.z - pointClipped.z);
-            float fracB = (NEAR_CLIP_DIST - pointClipped.z) / (pointB.z - pointClipped.z);
+            fracA = (NEAR_CLIP_DIST - pointClipped.z) / (pointA.z - pointClipped.z);
+            fracB = (NEAR_CLIP_DIST - pointClipped.z) / (pointB.z - pointClipped.z);
 
             // New triangle points (in view space)
-            float3 clipPointAlongEdgeA = Lerp3(pointClipped, pointA, fracA);
-            float3 clipPointAlongEdgeB = Lerp3(pointClipped, pointB, fracB);
+            clipPointAlongEdgeA = Lerp3(pointClipped, pointA, fracA);
+            clipPointAlongEdgeB = Lerp3(pointClipped, pointB, fracB);
 
             // Create new triangles
-            Tri rastTri;
-            rastTri.vertex[0] = clipPointAlongEdgeB;
-            rastTri.vertex[1] = clipPointAlongEdgeA;
-            rastTri.vertex[2] = pointB;
-            AddRasterizerPoint(model, clipPointAlongEdgeB, i + indexClip, i + indexPrev, fracB);
-            AddRasterizerPoint(model, clipPointAlongEdgeA, i + indexClip, i + indexNext, fracA);
-            AddRasterizerPoint(model, pointB, i + indexPrev);
+            rastTri.vertex[0] = ViewToScreen(camera, clipPointAlongEdgeB);
+            rastTri.vertex[1] = ViewToScreen(camera, clipPointAlongEdgeA);
+            rastTri.vertex[2] = ViewToScreen(camera, pointB);
+            rastTri.texture[0] = Lerp2(object->tris[i].texture[indexClip], object->tris[i].texture[indexPrev], fracB);
+            rastTri.texture[1] = Lerp2(object->tris[i].texture[indexClip], object->tris[i].texture[indexNext], fracA);
+            rastTri.texture[2] = object->tris[i].texture[indexPrev];
+            rastTri.normal[0] = Lerp3(object->tris[i].normal[indexClip], object->tris[i].normal[indexPrev], fracB);
+            rastTri.normal[1] = Lerp3(object->tris[i].normal[indexClip], object->tris[i].normal[indexNext], fracA);
+            rastTri.normal[2] = object->tris[i].normal[indexPrev];
+            RenderTri(rastTri, camera, object);
 
-            AddRasterizerPoint(model, clipPointAlongEdgeA, i + indexClip, i + indexNext, fracA);
-            AddRasterizerPoint(model, pointA, i + indexNext);
-            AddRasterizerPoint(model, pointB, i + indexPrev);
+            rastTri.vertex[0] = ViewToScreen(camera, clipPointAlongEdgeA);
+            rastTri.vertex[1] = ViewToScreen(camera, pointA);            
+            rastTri.vertex[2] = ViewToScreen(camera, pointB);
+            rastTri.texture[0] = Lerp2(object->tris[i].texture[indexClip], object->tris[i].texture[indexClip], fracA);
+            rastTri.texture[1] = rastTri.texture[indexNext];
+            rastTri.texture[2] = rastTri.texture[indexPrev];
+            rastTri.normal[0] = Lerp3(object->tris[i].normal[indexClip], object->tris[i].normal[indexClip], fracA);
+            rastTri.normal[1] = rastTri.normal[indexNext];
+            rastTri.normal[2] = rastTri.normal[indexPrev];
+            RenderTri(rastTri, camera, object);
             break;
         case 2:
             // Figure out which point will not be clipped, and the two that will be
-            int indexNonClip = !clip0 ? 0 : !clip1 ? 1 : 2;
-            int indexNext = (indexNonClip + 1) % 3;
-            int indexPrev = (indexNonClip - 1 + 3) % 3;
+            indexNonClip = !clip0 ? 0 : !clip1 ? 1 : 2;
+            indexNext = (indexNonClip + 1) % 3;
+            indexPrev = (indexNonClip + 2) % 3;
 
-            float3 pointNotClipped = screenTri.vertex[indexNonClip];
-            float3 pointA = screenTri.vertex[indexNext];
-            float3 pointB = screenTri.vertex[indexPrev];
+            pointNotClipped = viewTri.vertex[indexNonClip];
+            pointA = viewTri.vertex[indexNext];
+            pointB = viewTri.vertex[indexPrev];
 
             // Fraction along triangle edge at which the depth is equal to the clip distance
-            float fracA = (NEAR_CLIP_DIST - pointNotClipped.z) / (pointA.z - pointNotClipped.z);
-            float fracB = (NEAR_CLIP_DIST - pointNotClipped.z) / (pointB.z - pointNotClipped.z);
+            fracA = (NEAR_CLIP_DIST - pointNotClipped.z) / (pointA.z - pointNotClipped.z);
+            fracB = (NEAR_CLIP_DIST - pointNotClipped.z) / (pointB.z - pointNotClipped.z);
 
             // New triangle points (in view space)
-            float3 clipPointAlongEdgeA = Lerp3(pointNotClipped, pointA, fracA);
-            float3 clipPointAlongEdgeB = Lerp3(pointNotClipped, pointB, fracB);
+            clipPointAlongEdgeA = Lerp3(pointNotClipped, pointA, fracA);
+            clipPointAlongEdgeB = Lerp3(pointNotClipped, pointB, fracB);
 
             // Create new triangle
-            Tri rastTri;
-            rastTri.vertex[0] = clipPointAlongEdgeB;
-            rastTri.vertex[1] = pointNotClipped;
-            rastTri.vertex[2] = clipPointAlongEdgeA;
-            rastTri.texture[0] = Lerp2(screenTri.texture[i + indexNonClip], screenTri.texture[i + indexPrev], fracB);
-            rastTri.texture[1] = screenTri.texture[i + indexNonClip];
-            rastTri.texture[2] = Lerp2(screenTri.texture[i + indexNonClip], screenTri.texture[i + indexPrev], fracA);
-            rastTri.normal[0] = Lerp3(screenTri.normal[i + indexNonClip], screenTri.normal[i + indexPrev], fracB);
-            rastTri.normal[1] = screenTri.normal[i + indexNonClip];
-            rastTri.normal[2] = Lerp3(screenTri.normal[i + indexNonClip], screenTri.normal[i + indexPrev], fracA);
-            RenderTri(rastTri, camera, object, clip0 + clip1 + clip2);
+            rastTri.vertex[indexNonClip] = ViewToScreen(camera, pointNotClipped);
+            rastTri.vertex[indexNext] = ViewToScreen(camera, clipPointAlongEdgeA);
+            rastTri.vertex[indexPrev] = ViewToScreen(camera, clipPointAlongEdgeB);
+            rastTri.texture[0] = Lerp2(object->tris[i].texture[indexNonClip], object->tris[i].texture[indexPrev], fracB);
+            rastTri.texture[1] = object->tris[i].texture[indexNonClip];
+            rastTri.texture[2] = Lerp2(object->tris[i].texture[indexNonClip], object->tris[i].texture[indexPrev], fracA);
+            rastTri.normal[0] = Lerp3(object->tris[i].normal[indexNonClip], object->tris[i].normal[indexPrev], fracB);
+            rastTri.normal[1] = object->tris[i].normal[indexNonClip];
+            rastTri.normal[2] = Lerp3(object->tris[i].normal[indexNonClip], object->tris[i].normal[indexPrev], fracA);
+            RenderTri(rastTri, camera, object);
         }
     }
 }
 
-void RenderTri(Tri screenTri, Camera *camera, Object *object, int sum) {
+void RenderTri(Tri screenTri, Camera *camera, Object *object) {
     float minX = fminf(fminf(screenTri.vertex[0].x, screenTri.vertex[1].x), screenTri.vertex[2].x);
     float minY = fminf(fminf(screenTri.vertex[0].y, screenTri.vertex[1].y), screenTri.vertex[2].y);
     float maxX = fmaxf(fmaxf(screenTri.vertex[0].x, screenTri.vertex[1].x), screenTri.vertex[2].x);
@@ -113,10 +130,8 @@ void RenderTri(Tri screenTri, Camera *camera, Object *object, int sum) {
     float2 clampMax = (float2){clamp(maxX, 0, camera->target->width-1), clamp(maxY, 0, camera->target->height-1)};
 
     for (int x = floor(clampMin.x); x < ceil(clampMax.x); x++)
-    for (int y = floor(clampMin.y); y < ceil(clampMax.y); y++) {
-        object->colour = (sum == 0) ? (Pixel){255,0,0} : (sum == 1) ? (Pixel){0,255,0} : (Pixel){0,0,255};
+    for (int y = floor(clampMin.y); y < ceil(clampMax.y); y++)
         RenderPixel(x, y, camera, object, screenTri);
-    }
 }
 
 void RenderPixel(int x, int y, Camera *camera, Object *object, Tri screenTri) {
@@ -126,7 +141,7 @@ void RenderPixel(int x, int y, Camera *camera, Object *object, Tri screenTri) {
         return;
     
     float depth = 1/Dot3(Inverse3((float3){ screenTri.vertex[0].z, screenTri.vertex[1].z, screenTri.vertex[2].z }), weights);
-    if (camera->depth[x][y] < depth) 
+    if (camera->depth[x][y] <= depth) 
         return;
     
     float2 texture = ZERO2;
@@ -144,6 +159,7 @@ void RenderPixel(int x, int y, Camera *camera, Object *object, Tri screenTri) {
     normal = Rotate3(normal, object->transform.rot);
     
     camera->target->image[x][y] = PixelColour(object, texture, normal);
+    // camera->target->image[x][y] = Vec3ToColour(weights);
     camera->depth[x][y] = depth;
 }
 
@@ -170,11 +186,24 @@ Pixel PixelColour(Object* object, float2 texture, float3 normal) {
     return Vec3ToColour(Scale3(ColourToVec3(colour), lightIntensity));
 }
 
-Tri triToScreen(Camera *camera, Transform transform, Tri tri) {
+Tri triToScreen(Camera *camera, Transform transform, Tri tri, Tri* viewTri) {
     Tri screenTri = tri;
-    screenTri.vertex[0] = WorldToScreen(camera, LocalToWorld(transform, tri.vertex[0]));
-    screenTri.vertex[1] = WorldToScreen(camera, LocalToWorld(transform, tri.vertex[1]));
-    screenTri.vertex[2] = WorldToScreen(camera, LocalToWorld(transform, tri.vertex[2]));
+
+    if (viewTri == NULL) {
+        screenTri.vertex[0] = WorldToScreen(camera, LocalToWorld(transform, tri.vertex[0]));
+        screenTri.vertex[1] = WorldToScreen(camera, LocalToWorld(transform, tri.vertex[1]));
+        screenTri.vertex[2] = WorldToScreen(camera, LocalToWorld(transform, tri.vertex[2]));
+    }
+    else {
+        viewTri->vertex[0] = WorldToLocal(camera->transform, LocalToWorld(transform, tri.vertex[0]));
+        viewTri->vertex[1] = WorldToLocal(camera->transform, LocalToWorld(transform, tri.vertex[1]));
+        viewTri->vertex[2] = WorldToLocal(camera->transform, LocalToWorld(transform, tri.vertex[2]));
+
+        screenTri.vertex[0] = ViewToScreen(camera, viewTri->vertex[0]);
+        screenTri.vertex[1] = ViewToScreen(camera, viewTri->vertex[1]);
+        screenTri.vertex[2] = ViewToScreen(camera, viewTri->vertex[2]);
+    }
+    
     return screenTri;
 }
 

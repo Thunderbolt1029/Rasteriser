@@ -28,13 +28,13 @@ int main()
     
     dragon = LoadObjFile("assets/dragon.obj");
     dragon->transform = (Transform){0, 0, 0.7, 0, PI / 2, 0, 1};
-
-    grid = LoadObjFile("assets/grid.obj");
-    grid->transform = (Transform){0, -3, 5, 0, 0, 0, 10};
-    */
     
     plane = LoadObjFile("assets/plane.obj");
     plane->transform = (Transform){0, -3, 5, 0, 0, 0, 10};
+    */
+
+    grid = LoadObjFile("assets/grid.obj");
+    grid->transform = (Transform){0, -3, 5, 0, 0, 0, 30};
     
     Scene *scene = malloc(sizeof(Scene));
     scene->Update = &Update;
@@ -44,7 +44,7 @@ int main()
     // scene->objects[0] = cube;
     // scene->objects[1] = monkey;
     // scene->objects[2] = dragon;
-    scene->objects[0] = plane;
+    scene->objects[0] = grid;
 
     Run(scene);
 
@@ -52,8 +52,8 @@ int main()
     // FreeObject(cube);
     // FreeObject(monkey);
     // FreeObject(dragon);
-    FreeObject(plane);
-    // FreeObject(grid);
+    // FreeObject(plane);
+    FreeObject(grid);
 
 	return 0;
 }

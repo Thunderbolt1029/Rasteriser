@@ -53,7 +53,7 @@ int PointInTriangle(float2 p, float2 a, float2 b, float2 c, float3 *weights) {
     float areaABP = SignedTriangleArea(a, b, p);
     float areaBCP = SignedTriangleArea(b, c, p);
     float areaCAP = SignedTriangleArea(c, a, p);
-    int inTri = areaABP >= 0 && areaBCP >= 0 && areaCAP >= 0;
+    int inTri = areaABP >= 0 && areaBCP >= 0 && areaCAP >= 0 || areaABP <= 0 && areaBCP <= 0 && areaCAP <= 0;
 
     if (weights != NULL) {
         float invAreaSum = 1 / (areaABP + areaBCP + areaCAP);
@@ -71,6 +71,6 @@ float clamp(float d, float min, float max) {
     return t > max ? max : t;
 }
 float lerp(float x, float y, float t) {
-    t = clamp(t, 0, 1);
+    // t = clamp(t, 0, 1);
     return y * t + x * (1-t);
 }
