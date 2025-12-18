@@ -85,12 +85,29 @@ Camera *CreateCamera(int width, int height, float fov, float maxDistance) {
     cam->fov = fov;
     cam->maxDistance = maxDistance;
 
+    cam->pixMutex = malloc(sizeof(pthread_mutex_t*) * width);
+    for (int i = 0; i < width; i++)
+        cam->pixMutex[i] = malloc(sizeof(pthread_mutex_t) * height);    
+    for (int x = 0; x < width; x++)
+        for (int y = 0; y < height; y++)
+            pthread_mutex_init(&(cam->pixMutex[x][y]), NULL);
+
     return cam;
 }
-void DestroyCamera(Camera *camera) {
-    free(camera->target);
-    free(camera->depth);
-    free(camera);
+void DestroyCamera(Camera *cam) {
+    for (int x = 0; x < cam->target->width; x++)
+        for (int y = 0; y < cam->target->height; y++)
+            pthread_mutex_destroy(&(cam->pixMutex[x][y]));
+    for (int i = 0; i < cam->target->width; i++)
+        free(cam->pixMutex[i]); 
+    free(cam->pixMutex);
+
+    for (int i = 0; i < cam->target->width; i++)
+        free(cam->depth[i]);
+    free(cam->depth);
+
+    free(cam->target);
+    free(cam);
 }
 
 void ClearCamera(Camera *camera) {

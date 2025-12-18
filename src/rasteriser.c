@@ -8,114 +8,133 @@
 #include "list.h"
 #include "object.h"
 #include "transform.h"
+#include "threadpool.h"
 
-void RenderObject(Camera *camera, Object* object);
+void RenderObject(Camera *camera, Object* object, tpool_t *tpool);
 void RenderTri(Tri screenTri, Camera *camera, Object *object);
 void RenderPixel(int x, int y, Camera *camera, Object *object, Tri screenTri);
 Pixel PixelColour(Object* object, float2 texture, float3 normal);
 Tri triToScreen(Camera *camera, Transform transform, Tri tri, Tri *viewTri);
 
+typedef struct {
+    Camera* camera;
+    Object* object;
+    int i;
+} RenderObjectTriParam;
+void RenderObjectTri(void *arg);
+
 #define NEAR_CLIP_DIST 0.01f
 
-void RenderScene(Scene* scene) {
+void RenderScene(Scene* scene, tpool_t *tpool) {
     clock_t t = clock(); 
     for (int i = 0; i < scene->NoObjects; i++) {
-        RenderObject(scene->camera, scene->objects[i]);
+        RenderObject(scene->camera, scene->objects[i], tpool);
         t = clock() - t; 
-        // printf("%s %f\n", scene->objects[i]->fileName, 1/(((double)t)/CLOCKS_PER_SEC)); 
     }
-    // printf("\n");
 }
 
-void RenderObject(Camera* camera, Object* object) {
+void RenderObject(Camera* camera, Object* object, tpool_t *tpool) {
     for (int i = 0; i < object->triCount; i++) {
-        Tri viewTri;
-        Tri screenTri = triToScreen(camera, object->transform, object->tris[i], &viewTri);
+        RenderObjectTriParam *param = malloc(sizeof(RenderObjectTriParam));
+        param->camera = camera;
+        param->object = object;
+        param->i = i;
+        tpool_addWork(tpool, RenderObjectTri, param);
+    }
+}
 
-        int clip0 = screenTri.vertex[0].z <= 0;
-        int clip1 = screenTri.vertex[1].z <= 0;
-        int clip2 = screenTri.vertex[2].z <= 0;
+void RenderObjectTri(void *arg) {
+    Camera* camera = ((RenderObjectTriParam *)arg)->camera;
+    Object* object = ((RenderObjectTriParam *)arg)->object;
+    int i = ((RenderObjectTriParam *)arg)->i;
+    free(arg);
 
-        int indexClip, indexNonClip, indexNext, indexPrev;
-        float3 pointA, pointB, pointClipped, pointNotClipped, clipPointAlongEdgeA, clipPointAlongEdgeB;
-        float fracA, fracB;
-        Tri rastTri;
+    Tri viewTri;
+    Tri screenTri = triToScreen(camera, object->transform, object->tris[i], &viewTri);
 
-        switch (clip0 + clip1 + clip2) {
-        case 0:
-            RenderTri(screenTri, camera, object);
-            break;
-        case 1:
-            // Figure out which point is to be clipped, and the two that will remain
-            indexClip = clip0 ? 0 : clip1 ? 1 : 2;
-            indexNext = (indexClip + 1) % 3;
-            indexPrev = (indexClip - 1 + 3) % 3;
+    int clip0 = screenTri.vertex[0].z <= 0;
+    int clip1 = screenTri.vertex[1].z <= 0;
+    int clip2 = screenTri.vertex[2].z <= 0;
 
-            pointClipped = viewTri.vertex[indexClip];
-            pointA = viewTri.vertex[indexNext];
-            pointB = viewTri.vertex[indexPrev];
+    int indexClip, indexNonClip, indexNext, indexPrev;
+    float3 pointA, pointB, pointClipped, pointNotClipped, clipPointAlongEdgeA, clipPointAlongEdgeB;
+    float fracA, fracB;
+    Tri rastTri;
 
-            // Fraction along triangle edge at which the depth is equal to the clip distance
-            fracA = (NEAR_CLIP_DIST - pointClipped.z) / (pointA.z - pointClipped.z);
-            fracB = (NEAR_CLIP_DIST - pointClipped.z) / (pointB.z - pointClipped.z);
+    switch (clip0 + clip1 + clip2) {
+    case 0:
+        RenderTri(screenTri, camera, object);
+        break;
+    case 1:
+        // Figure out which point is to be clipped, and the two that will remain
+        indexClip = clip0 ? 0 : clip1 ? 1 : 2;
+        indexNext = (indexClip + 1) % 3;
+        indexPrev = (indexClip - 1 + 3) % 3;
 
-            // New triangle points (in view space)
-            clipPointAlongEdgeA = Lerp3(pointClipped, pointA, fracA);
-            clipPointAlongEdgeB = Lerp3(pointClipped, pointB, fracB);
+        pointClipped = viewTri.vertex[indexClip];
+        pointA = viewTri.vertex[indexNext];
+        pointB = viewTri.vertex[indexPrev];
 
-            // Create new triangles
-            rastTri.vertex[0] = ViewToScreen(camera, clipPointAlongEdgeB);
-            rastTri.vertex[1] = ViewToScreen(camera, clipPointAlongEdgeA);
-            rastTri.vertex[2] = ViewToScreen(camera, pointB);
-            rastTri.texture[0] = Lerp2(object->tris[i].texture[indexClip], object->tris[i].texture[indexPrev], fracB);
-            rastTri.texture[1] = Lerp2(object->tris[i].texture[indexClip], object->tris[i].texture[indexNext], fracA);
-            rastTri.texture[2] = object->tris[i].texture[indexPrev];
-            rastTri.normal[0] = Lerp3(object->tris[i].normal[indexClip], object->tris[i].normal[indexPrev], fracB);
-            rastTri.normal[1] = Lerp3(object->tris[i].normal[indexClip], object->tris[i].normal[indexNext], fracA);
-            rastTri.normal[2] = object->tris[i].normal[indexPrev];
-            RenderTri(rastTri, camera, object);
+        // Fraction along triangle edge at which the depth is equal to the clip distance
+        fracA = (NEAR_CLIP_DIST - pointClipped.z) / (pointA.z - pointClipped.z);
+        fracB = (NEAR_CLIP_DIST - pointClipped.z) / (pointB.z - pointClipped.z);
 
-            rastTri.vertex[0] = ViewToScreen(camera, clipPointAlongEdgeA);
-            rastTri.vertex[1] = ViewToScreen(camera, pointA);            
-            rastTri.vertex[2] = ViewToScreen(camera, pointB);
-            rastTri.texture[0] = Lerp2(object->tris[i].texture[indexClip], object->tris[i].texture[indexClip], fracA);
-            rastTri.texture[1] = rastTri.texture[indexNext];
-            rastTri.texture[2] = rastTri.texture[indexPrev];
-            rastTri.normal[0] = Lerp3(object->tris[i].normal[indexClip], object->tris[i].normal[indexClip], fracA);
-            rastTri.normal[1] = rastTri.normal[indexNext];
-            rastTri.normal[2] = rastTri.normal[indexPrev];
-            RenderTri(rastTri, camera, object);
-            break;
-        case 2:
-            // Figure out which point will not be clipped, and the two that will be
-            indexNonClip = !clip0 ? 0 : !clip1 ? 1 : 2;
-            indexNext = (indexNonClip + 1) % 3;
-            indexPrev = (indexNonClip + 2) % 3;
+        // New triangle points (in view space)
+        clipPointAlongEdgeA = Lerp3(pointClipped, pointA, fracA);
+        clipPointAlongEdgeB = Lerp3(pointClipped, pointB, fracB);
 
-            pointNotClipped = viewTri.vertex[indexNonClip];
-            pointA = viewTri.vertex[indexNext];
-            pointB = viewTri.vertex[indexPrev];
+        // Create new triangles
+        rastTri.vertex[0] = ViewToScreen(camera, clipPointAlongEdgeB);
+        rastTri.vertex[1] = ViewToScreen(camera, clipPointAlongEdgeA);
+        rastTri.vertex[2] = ViewToScreen(camera, pointB);
+        rastTri.texture[0] = Lerp2(object->tris[i].texture[indexClip], object->tris[i].texture[indexPrev], fracB);
+        rastTri.texture[1] = Lerp2(object->tris[i].texture[indexClip], object->tris[i].texture[indexNext], fracA);
+        rastTri.texture[2] = object->tris[i].texture[indexPrev];
+        rastTri.normal[0] = Lerp3(object->tris[i].normal[indexClip], object->tris[i].normal[indexPrev], fracB);
+        rastTri.normal[1] = Lerp3(object->tris[i].normal[indexClip], object->tris[i].normal[indexNext], fracA);
+        rastTri.normal[2] = object->tris[i].normal[indexPrev];
+        RenderTri(rastTri, camera, object);
 
-            // Fraction along triangle edge at which the depth is equal to the clip distance
-            fracA = (NEAR_CLIP_DIST - pointNotClipped.z) / (pointA.z - pointNotClipped.z);
-            fracB = (NEAR_CLIP_DIST - pointNotClipped.z) / (pointB.z - pointNotClipped.z);
+        rastTri.vertex[0] = ViewToScreen(camera, clipPointAlongEdgeA);
+        rastTri.vertex[1] = ViewToScreen(camera, pointA);            
+        rastTri.vertex[2] = ViewToScreen(camera, pointB);
+        rastTri.texture[0] = Lerp2(object->tris[i].texture[indexClip], object->tris[i].texture[indexClip], fracA);
+        rastTri.texture[1] = rastTri.texture[indexNext];
+        rastTri.texture[2] = rastTri.texture[indexPrev];
+        rastTri.normal[0] = Lerp3(object->tris[i].normal[indexClip], object->tris[i].normal[indexClip], fracA);
+        rastTri.normal[1] = rastTri.normal[indexNext];
+        rastTri.normal[2] = rastTri.normal[indexPrev];
+        RenderTri(rastTri, camera, object);
+        break;
+    case 2:
+        // Figure out which point will not be clipped, and the two that will be
+        indexNonClip = !clip0 ? 0 : !clip1 ? 1 : 2;
+        indexNext = (indexNonClip + 1) % 3;
+        indexPrev = (indexNonClip + 2) % 3;
 
-            // New triangle points (in view space)
-            clipPointAlongEdgeA = Lerp3(pointNotClipped, pointA, fracA);
-            clipPointAlongEdgeB = Lerp3(pointNotClipped, pointB, fracB);
+        pointNotClipped = viewTri.vertex[indexNonClip];
+        pointA = viewTri.vertex[indexNext];
+        pointB = viewTri.vertex[indexPrev];
 
-            // Create new triangle
-            rastTri.vertex[indexNonClip] = ViewToScreen(camera, pointNotClipped);
-            rastTri.vertex[indexNext] = ViewToScreen(camera, clipPointAlongEdgeA);
-            rastTri.vertex[indexPrev] = ViewToScreen(camera, clipPointAlongEdgeB);
-            rastTri.texture[0] = Lerp2(object->tris[i].texture[indexNonClip], object->tris[i].texture[indexPrev], fracB);
-            rastTri.texture[1] = object->tris[i].texture[indexNonClip];
-            rastTri.texture[2] = Lerp2(object->tris[i].texture[indexNonClip], object->tris[i].texture[indexPrev], fracA);
-            rastTri.normal[0] = Lerp3(object->tris[i].normal[indexNonClip], object->tris[i].normal[indexPrev], fracB);
-            rastTri.normal[1] = object->tris[i].normal[indexNonClip];
-            rastTri.normal[2] = Lerp3(object->tris[i].normal[indexNonClip], object->tris[i].normal[indexPrev], fracA);
-            RenderTri(rastTri, camera, object);
-        }
+        // Fraction along triangle edge at which the depth is equal to the clip distance
+        fracA = (NEAR_CLIP_DIST - pointNotClipped.z) / (pointA.z - pointNotClipped.z);
+        fracB = (NEAR_CLIP_DIST - pointNotClipped.z) / (pointB.z - pointNotClipped.z);
+
+        // New triangle points (in view space)
+        clipPointAlongEdgeA = Lerp3(pointNotClipped, pointA, fracA);
+        clipPointAlongEdgeB = Lerp3(pointNotClipped, pointB, fracB);
+
+        // Create new triangle
+        rastTri.vertex[indexNonClip] = ViewToScreen(camera, pointNotClipped);
+        rastTri.vertex[indexNext] = ViewToScreen(camera, clipPointAlongEdgeA);
+        rastTri.vertex[indexPrev] = ViewToScreen(camera, clipPointAlongEdgeB);
+        rastTri.texture[0] = Lerp2(object->tris[i].texture[indexNonClip], object->tris[i].texture[indexPrev], fracB);
+        rastTri.texture[1] = object->tris[i].texture[indexNonClip];
+        rastTri.texture[2] = Lerp2(object->tris[i].texture[indexNonClip], object->tris[i].texture[indexPrev], fracA);
+        rastTri.normal[0] = Lerp3(object->tris[i].normal[indexNonClip], object->tris[i].normal[indexPrev], fracB);
+        rastTri.normal[1] = object->tris[i].normal[indexNonClip];
+        rastTri.normal[2] = Lerp3(object->tris[i].normal[indexNonClip], object->tris[i].normal[indexPrev], fracA);
+        RenderTri(rastTri, camera, object);
     }
 }
 
@@ -140,8 +159,12 @@ void RenderPixel(int x, int y, Camera *camera, Object *object, Tri screenTri) {
         return;
     
     float depth = 1/Dot3(Inverse3((float3){ screenTri.vertex[0].z, screenTri.vertex[1].z, screenTri.vertex[2].z }), weights);
-    if (camera->depth[x][y] <= depth) 
+    
+    pthread_mutex_lock(&(camera->pixMutex[x][y]));
+    if (camera->depth[x][y] <= depth) {
+        pthread_mutex_unlock(&(camera->pixMutex[x][y]));
         return;
+    }
     
     float2 texture = ZERO2;
     texture = Add2(texture, Scale2(screenTri.texture[0], weights.x / screenTri.vertex[0].z));
@@ -159,6 +182,8 @@ void RenderPixel(int x, int y, Camera *camera, Object *object, Tri screenTri) {
     
     camera->target->image[x][y] = PixelColour(object, texture, normal);
     camera->depth[x][y] = depth;
+
+    pthread_mutex_unlock(&(camera->pixMutex[x][y]));
 }
 
 Pixel PixelColour(Object* object, float2 texture, float3 normal) {

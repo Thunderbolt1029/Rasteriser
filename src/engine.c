@@ -5,6 +5,9 @@
 #include <stdio.h>
 
 #include "imgio.h"
+#include "threadpool.h"
+
+#define NO_THREADS 16
 
 void Flatten(Pixel** TD, Color* OD, int width, int height);
 
@@ -18,37 +21,46 @@ void Run(Scene* scene) {
 
     Color *texColBuffer = MemAlloc(sizeof(Color) * scene->camera->target->width * scene->camera->target->height);
 
-	while (!WindowShouldClose())
-	{
-        // Update Scene
-        (*scene->Update)(GetFrameTime());
-                
-        // Render Scene to target
-        ClearCamera(scene->camera);
-        RenderScene(scene);
+    tpool_t *tpool = tpool_create(NO_THREADS);
+    if (tpool == NULL) {
+        fprintf(stderr, "Failed to create thread pool.\nExiting...\n");
+    }
+    else {
+        while (!WindowShouldClose())
+        {
+            // Update Scene
+            (*scene->Update)(GetFrameTime());
+                    
+            // Render Scene to target
+            ClearCamera(scene->camera);
+            RenderScene(scene, tpool);
+            tpool_wait(tpool);
 
-        Flatten(scene->camera->target->image, texColBuffer, scene->camera->target->width, scene->camera->target->height);
-        UpdateTexture(texture, texColBuffer);
+            Flatten(scene->camera->target->image, texColBuffer, scene->camera->target->width, scene->camera->target->height);
+            UpdateTexture(texture, texColBuffer);
 
-        Rectangle src = (Rectangle){0, scene->camera->target->height, scene->camera->target->width, -scene->camera->target->height};
-        Rectangle dest = (Rectangle){0, 0, GetScreenWidth(), GetScreenHeight()};
-        Vector2 origin = (Vector2){0, 0};
+            Rectangle src = (Rectangle){0, scene->camera->target->height, scene->camera->target->width, -scene->camera->target->height};
+            Rectangle dest = (Rectangle){0, 0, GetScreenWidth(), GetScreenHeight()};
+            Vector2 origin = (Vector2){0, 0};
 
-        // Draw
-        BeginDrawing();
-        DrawTexturePro(texture, src, dest, origin, 0.0f, WHITE);
-        DrawFPS(10, 10);
-        DrawText(TextFormat("pos: %f %f %f\nrot: %f %f %f", 
-                scene->camera->transform.pos.x,
-                scene->camera->transform.pos.y,
-                scene->camera->transform.pos.z,
-                scene->camera->transform.rot.x,
-                scene->camera->transform.rot.y,
-                scene->camera->transform.rot.z
-            ), 10, 40, 20, LIME
-        );
-		EndDrawing();
-	}
+            // Draw
+            BeginDrawing();
+            DrawTexturePro(texture, src, dest, origin, 0.0f, WHITE);
+            DrawFPS(10, 10);
+            DrawText(TextFormat("pos: %f %f %f\nrot: %f %f %f", 
+                    scene->camera->transform.pos.x,
+                    scene->camera->transform.pos.y,
+                    scene->camera->transform.pos.z,
+                    scene->camera->transform.rot.x,
+                    scene->camera->transform.rot.y,
+                    scene->camera->transform.rot.z
+                ), 10, 40, 20, LIME
+            );
+            EndDrawing();
+        }
+     
+        tpool_destroy(tpool);
+    }
 
     MemFree(texColBuffer);
     UnloadTexture(texture);

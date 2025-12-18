@@ -1,6 +1,8 @@
 #ifndef TRANSFORM_H
 #define TRANSFORM_H
 
+#include <pthread.h>
+
 #include "common.h"
 #include "imgio.h"
 
@@ -16,6 +18,8 @@ typedef struct {
     Transform transform;
     float fov;
     float maxDistance;
+
+    pthread_mutex_t **pixMutex;
 } Camera;
 
 float3 LocalToWorld(Transform transform, float3 point);
