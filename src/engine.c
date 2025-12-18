@@ -8,6 +8,7 @@
 #include "threadpool.h"
 
 #define NO_THREADS 16
+#define Q_SIZE 50000
 
 void Flatten(Pixel** TD, Color* OD, int width, int height);
 
@@ -21,7 +22,7 @@ void Run(Scene* scene) {
 
     Color *texColBuffer = MemAlloc(sizeof(Color) * scene->camera->target->width * scene->camera->target->height);
 
-    tpool_t *tpool = tpool_create(NO_THREADS);
+    tpool_t *tpool = tpool_create(NO_THREADS, Q_SIZE);
     if (tpool == NULL) {
         fprintf(stderr, "Failed to create thread pool.\nExiting...\n");
     }

@@ -7,12 +7,14 @@
 typedef struct tpool_work {
     thread_func func;
     void *arg;
-    struct tpool_work *next;
 } tpool_work_t;
 
 struct tpool {
-    tpool_work_t *front;
-    tpool_work_t *back;
+    tpool_work_t *q;
+    size_t qSize;
+    int front;
+    int back;
+    int noJobs;
 
     pthread_mutex_t work_mutex;
     pthread_cond_t work_cond;
@@ -24,6 +26,11 @@ struct tpool {
     bool stop;
 };
 
+int getJobCount(tpool_t *tpool) {
+    return tpool->noJobs;
+}
+
+/*
 static tpool_work_t *tpool_work_create(thread_func func, void *arg) {
     tpool_work_t *work = malloc(sizeof(tpool_work_t));
 
@@ -32,25 +39,32 @@ static tpool_work_t *tpool_work_create(thread_func func, void *arg) {
 
     work->func = func;
     work->arg = arg;
-    work->next = NULL;
 
     return work;
 }
 
-// returns: tpool_work_t *next
-static tpool_work_t *tpool_work_destroy(tpool_work_t *work) {
+static void tpool_work_destroy(tpool_work_t *work) {
     if (work == NULL)
-        return NULL;
-
-    tpool_work_t *next = work->next;
-    free(work);
-    return next;
-}
-
-static void tpool_work_enqueue(tpool_t *tpool, tpool_work_t *work) {
-    if (tpool == NULL || work == NULL)
         return;
-    
+
+    free(work);
+}
+*/
+
+static void tpool_work_enqueue(tpool_t *tpool, thread_func func, void *arg) {
+    if (tpool == NULL || func == NULL)
+        return;
+
+    while (tpool->noJobs == tpool->qSize-1)
+        pthread_cond_wait(&(tpool->working_cond), &(tpool->work_mutex));
+
+    tpool->noJobs++;
+    tpool->back++;
+    tpool->back %= tpool->qSize;
+
+    tpool->q[tpool->back] = (tpool_work_t){ func, arg };
+
+    /*
     if (tpool->front == NULL) {
         tpool->front = work;
         tpool->back = work;
@@ -59,17 +73,19 @@ static void tpool_work_enqueue(tpool_t *tpool, tpool_work_t *work) {
         tpool->back->next = work;
         tpool->back = work;
     }
+    */
 }
 
 static tpool_work_t *tpool_work_dequeue(tpool_t *tpool) {
-    if (tpool == NULL)
+    if (tpool == NULL || tpool->noJobs == 0)
         return NULL;
     
-    tpool_work_t *work = tpool->front;
+    tpool_work_t *work = &(tpool->q[tpool->front]);
+    tpool->front++;
+    tpool->front %= tpool->qSize;
+    tpool->noJobs--;
 
-    if (work == NULL)
-        return NULL;
-
+    /*
     if (work->next == NULL) {
         tpool->front = NULL;
         tpool->back = NULL;
@@ -77,6 +93,7 @@ static tpool_work_t *tpool_work_dequeue(tpool_t *tpool) {
     else {
         tpool->front = work->next;
     }
+    */
     
     return work;
 }
@@ -88,7 +105,7 @@ static void *tpool_worker(void *args) {
         // Wait for available job
         pthread_mutex_lock(&(tpool->work_mutex));
 
-        while (tpool->front == NULL && !tpool->stop) {
+        while (tpool->noJobs == 0 && !tpool->stop) {
             pthread_cond_wait(&(tpool->work_cond), &(tpool->work_mutex));
         }
 
@@ -108,7 +125,7 @@ static void *tpool_worker(void *args) {
     
             func(arg);
     
-            tpool_work_destroy(work);
+            // tpool_work_destroy(work);
         }
 
         // Signal completed job
@@ -124,7 +141,7 @@ static void *tpool_worker(void *args) {
     return NULL;
 }
 
-tpool_t *tpool_create(size_t noThreads) {
+tpool_t *tpool_create(size_t noThreads, size_t qSize) {
     if (noThreads <= 0)
         return NULL;
 
@@ -132,6 +149,10 @@ tpool_t *tpool_create(size_t noThreads) {
 
     if (tpool == NULL)
         return NULL;
+
+    tpool->qSize = qSize;
+    tpool->q = malloc(sizeof(tpool_work_t) * qSize);
+    tpool->back = -1;
 
     pthread_mutex_init(&(tpool->work_mutex), NULL);
     pthread_cond_init(&(tpool->work_cond), NULL);
@@ -154,11 +175,17 @@ void tpool_destroy(tpool_t *tpool) {
 
     pthread_mutex_lock(&(tpool->work_mutex));
 
+    while (tpool->noJobs != 0) {
+        tpool_work_dequeue(tpool);
+    }
+
+    /*
     tpool_work_t *next = tpool->front;
     while (next != NULL) {
         next = tpool_work_destroy(next);
     }
     tpool->front = NULL;
+    */
 
     tpool->stop = true;
     pthread_cond_broadcast(&(tpool->work_cond));
@@ -166,6 +193,8 @@ void tpool_destroy(tpool_t *tpool) {
     pthread_mutex_unlock(&(tpool->work_mutex));
 
     tpool_wait(tpool);
+
+    free(tpool->q);
 
     pthread_mutex_destroy(&(tpool->work_mutex));
     pthread_cond_destroy(&(tpool->work_cond));
@@ -179,13 +208,15 @@ int tpool_addWork(tpool_t *tpool, thread_func func, void *arg) {
     if (tpool == NULL)
         return 1;
 
+    /*
     tpool_work_t *work = tpool_work_create(func, arg);
     if (work == NULL)
         return 1;
+    */
 
     pthread_mutex_lock(&(tpool->work_mutex));
 
-    tpool_work_enqueue(tpool, work);
+    tpool_work_enqueue(tpool, func, arg);
 
     pthread_cond_signal(&(tpool->work_cond));
 
@@ -200,7 +231,7 @@ void tpool_wait(tpool_t *tpool) {
 
     pthread_mutex_lock(&(tpool->work_mutex));
 
-    while (tpool->front != NULL || (!tpool->stop && tpool->working_cnt != 0) || (tpool->stop && tpool->thread_cnt > 0)) {
+    while (tpool->noJobs != 0 || (!tpool->stop && tpool->working_cnt != 0) || (tpool->stop && tpool->thread_cnt > 0)) {
         pthread_cond_wait(&(tpool->working_cond), &(tpool->work_mutex));
     }
 

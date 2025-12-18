@@ -6,7 +6,9 @@ typedef struct tpool tpool_t;
 
 typedef void (*thread_func)(void *arg);
 
-tpool_t *tpool_create(size_t noThreads);
+int getJobCount(tpool_t *);
+
+tpool_t *tpool_create(size_t noThreads, size_t qSize);
 void tpool_destroy(tpool_t *tpool);
 
 int tpool_addWork(tpool_t *tpool, thread_func func, void *arg);

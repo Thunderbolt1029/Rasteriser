@@ -31,6 +31,7 @@ void RenderScene(Scene* scene, tpool_t *tpool) {
         RenderObject(scene->camera, scene->objects[i], tpool);
         t = clock() - t; 
     }
+    // printf("no jobs: %d\n", getJobCount(tpool));
 }
 
 void RenderObject(Camera* camera, Object* object, tpool_t *tpool) {
