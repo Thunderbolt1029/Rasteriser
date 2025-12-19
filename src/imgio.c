@@ -33,6 +33,8 @@ Texture* ReadBMP(char* fileName) {
         texture->image[x][y] = (Pixel){data[2], data[1], data[0]};
     }
 
+    fclose(fptr);
+
     return texture;
 }
 

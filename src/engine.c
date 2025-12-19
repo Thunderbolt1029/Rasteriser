@@ -16,7 +16,9 @@ void Run(Scene* scene) {
 	InitWindow(1620, 1080, "Rasteriser");
 	// InitWindow(scene->camera->target->width, scene->camera->target->height, "Rasteriser");
 
-    Texture2D texture = LoadTextureFromImage(GenImageColor(scene->camera->target->width, scene->camera->target->height, BLACK));
+    Image img = GenImageColor(scene->camera->target->width, scene->camera->target->height, BLACK);
+    Texture2D texture = LoadTextureFromImage(img);
+    UnloadImage(img);
     SetTextureFilter(texture, TEXTURE_FILTER_POINT);
 
     Color *texColBuffer = MemAlloc(sizeof(Color) * scene->camera->target->width * scene->camera->target->height);

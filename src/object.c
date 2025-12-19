@@ -111,6 +111,8 @@ Object* LoadObjFile(const char* objFileName) {
         }
     }
 
+    free(line);
+
     obj->triCount = triCount;
     obj->tris = malloc(sizeof(Tri) * triCount);
 
@@ -120,6 +122,11 @@ Object* LoadObjFile(const char* objFileName) {
         obj->tris[i++] = *tri;
         ListRemove(triangleList,tri);
     }
+
+    ListDelete(vertexList);
+    ListDelete(normalList);
+    ListDelete(textureList);
+    ListDelete(triangleList);
 
     fclose(fptr);
     return obj;
