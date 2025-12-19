@@ -106,7 +106,7 @@ void DestroyCamera(Camera *cam) {
         free(cam->depth[i]);
     free(cam->depth);
 
-    free(cam->target);
+    FreeImage(cam->target);
     free(cam);
 }
 

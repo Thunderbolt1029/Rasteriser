@@ -28,20 +28,27 @@ int main()
     
     plane = LoadObjFile("assets/plane.obj");
 
-    Scene *scene = malloc(sizeof(Scene));
-    scene->Update = &Update;
-    scene->camera = camera;
-    scene->NoObjects = 4;
-    scene->objects = malloc(sizeof(Object) * scene->NoObjects);
-    scene->objects[0] = cube;
-    scene->objects[1] = monkey;
-    scene->objects[2] = dragon;
-    scene->objects[3] = plane;
+    int noObjects = 4;
+    Object *objects[noObjects];
+    objects[0] = cube;
+    objects[1] = monkey;
+    objects[2] = dragon;
+    objects[3] = plane;
 
-    Run(scene);
+    Scene scene;
+    scene.Update = &Update;
+    scene.camera = camera;
+    scene.NoObjects = noObjects;
+    scene.objects = objects;
+    
+
+    Run(&scene);
 
     DestroyCamera(camera);
+    
+    FreeImage(cube->texture);
     FreeObject(cube);
+
     FreeObject(monkey);
     FreeObject(dragon);
     FreeObject(plane);
