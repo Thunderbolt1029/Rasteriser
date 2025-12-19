@@ -2,6 +2,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#ifdef _GNU_SOURCE
+#include <stdio.h>
+#endif
+
 #include "threadpool.h"
 
 typedef struct tpool_work {
@@ -142,6 +146,12 @@ tpool_t *tpool_create(size_t noThreads) {
     for (size_t i = 0; i < noThreads; i++) {
         pthread_t thread;
         pthread_create(&thread, NULL, tpool_worker, tpool);
+#ifdef _GNU_SOURCE
+        int sSize = snprintf(NULL, 0, "tpool-%d", i)+1;
+        char threadName[sSize];
+        snprintf(threadName, sSize, "tpool-%d", i);
+        pthread_setname_np(thread, threadName);
+#endif
         pthread_detach(thread);
     }
 

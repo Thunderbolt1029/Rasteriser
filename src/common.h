@@ -52,6 +52,7 @@ float3 Sub3(float3 a, float3 b);
 float3 Scale3(float3 vec, float scale);
 int Equal3(float3 a, float3 b);
 float LengthSquared3(float3 vec);
+float Length3(float3 vec);
 float Dot3(float3, float3);
 float3 Inverse3(float3);
 float3 Normalise3(float3);
