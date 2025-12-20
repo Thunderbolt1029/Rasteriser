@@ -8,7 +8,7 @@ typedef void (*UpdateCallBack)(float);
 typedef struct {
     Camera *camera;
     Object **objects;
-    int NoObjects;
+    int noObjects;
     UpdateCallBack Update;
 } Scene;
 

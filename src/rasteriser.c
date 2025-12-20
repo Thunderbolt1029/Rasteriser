@@ -27,7 +27,7 @@ void RenderObjectTri(void *arg);
 
 void RenderScene(Scene* scene, tpool_t *tpool) {
     clock_t t = clock(); 
-    for (int i = 0; i < scene->NoObjects; i++) {
+    for (int i = 0; i < scene->noObjects; i++) {
         RenderObject(scene->camera, scene->objects[i], tpool);
         t = clock() - t; 
     }
@@ -39,7 +39,11 @@ void RenderObject(Camera* camera, Object* object, tpool_t *tpool) {
         param->camera = camera;
         param->object = object;
         param->i = i;
-        tpool_addWork(tpool, RenderObjectTri, param);
+
+        if (tpool == NULL)
+            RenderObjectTri(param);
+        else
+            tpool_addWork(tpool, RenderObjectTri, param);
     }
 }
 

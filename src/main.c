@@ -10,48 +10,34 @@ void Update(float deltaTime);
 #define MOVE_SPEED 10
 #define TURN_SPEED 1
 
-Camera *camera;
-Object *cube, *monkey, *dragon, *plane;
+Scene scene;
 
 int main() 
 {
-    // srand(time(NULL));
-    camera = CreateCamera(540, 360, 90, 1000);
-    camera->transform = (Transform){ 0.00000f, 0.00000f, -7.75418f, 0.00000f, 0.00000f, 0.00000f, 1.00000f };
-
-    cube = LoadObjFile("assets/cube.obj");
-    cube->texture = ReadBMP("assets/CubeBoundsTexture.bmp");
-    
-    monkey = LoadObjFile("assets/monkey.obj");
-    
-    dragon = LoadObjFile("assets/dragon.obj");
-    
-    plane = LoadObjFile("assets/plane.obj");
-
-    int noObjects = 4;
-    Object *objects[noObjects];
-    objects[0] = cube;
-    objects[1] = monkey;
-    objects[2] = dragon;
-    objects[3] = plane;
-
-    Scene scene;
     scene.Update = &Update;
-    scene.camera = camera;
-    scene.NoObjects = noObjects;
-    scene.objects = objects;
+
+    scene.camera = CreateCamera(540, 360, 90, 1000);
+    scene.camera->transform = (Transform){ 0.00000f, 0.00000f, -7.75418f, 0.00000f, 0.00000f, 0.00000f, 1.00000f };
     
+
+    scene.noObjects = 4;
+    Object *objects[scene.noObjects];
+    scene.objects = objects;
+
+    objects[0] = LoadObjFile("assets/cube.obj");
+    objects[0]->texture = ReadBMP("assets/CubeBoundsTexture.bmp");
+
+    objects[1] = LoadObjFile("assets/monkey.obj");
+    objects[2] = LoadObjFile("assets/dragon.obj");
+    objects[3] = LoadObjFile("assets/plane.obj");
 
     Run(&scene);
 
-    DestroyCamera(camera);
+    DestroyCamera(scene.camera);
     
-    FreeImage(cube->texture);
-    FreeObject(cube);
-
-    FreeObject(monkey);
-    FreeObject(dragon);
-    FreeObject(plane);
+    FreeImage(objects[0]->texture);
+    for (int i = 0; i < scene.noObjects; i++)
+        FreeObject(objects[i]);
 
 	return 0;
 }
@@ -63,12 +49,13 @@ void Update(float deltaTime) {
     if (IsKeyDown(KEY_S)) MoveDir.z--;
     if (IsKeyDown(KEY_A)) MoveDir.x--;
     if (IsKeyDown(KEY_D)) MoveDir.x++;
-    MoveDir = Normalise3(MoveDir);
-    MoveDir = Rotate3(MoveDir, (float3){0, camera->transform.rot.y, 0});
-    camera->transform.pos = Add3(camera->transform.pos, Scale3(MoveDir, MOVE_SPEED * deltaTime));
 
-    if (IsKeyDown(KEY_LEFT)) camera->transform.rot.y += TURN_SPEED * deltaTime;
-    if (IsKeyDown(KEY_RIGHT)) camera->transform.rot.y -= TURN_SPEED * deltaTime;
-    if (IsKeyDown(KEY_UP)) camera->transform.rot.x += TURN_SPEED * deltaTime;
-    if (IsKeyDown(KEY_DOWN)) camera->transform.rot.x -= TURN_SPEED * deltaTime;
+    MoveDir = Normalise3(MoveDir);
+    MoveDir = Rotate3(MoveDir, (float3){0, scene.camera->transform.rot.y, 0});
+    scene.camera->transform.pos = Add3(scene.camera->transform.pos, Scale3(MoveDir, MOVE_SPEED * deltaTime));
+
+    if (IsKeyDown(KEY_LEFT)) scene.camera->transform.rot.y += TURN_SPEED * deltaTime;
+    if (IsKeyDown(KEY_RIGHT)) scene.camera->transform.rot.y -= TURN_SPEED * deltaTime;
+    if (IsKeyDown(KEY_UP)) scene.camera->transform.rot.x += TURN_SPEED * deltaTime;
+    if (IsKeyDown(KEY_DOWN)) scene.camera->transform.rot.x -= TURN_SPEED * deltaTime;
 }

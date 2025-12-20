@@ -7,7 +7,7 @@
 #include "imgio.h"
 #include "threadpool.h"
 
-#define NO_THREADS 16
+#define NO_THREADS 10
 
 void Flatten(Pixel** TD, Color* OD, int width, int height);
 
@@ -25,13 +25,15 @@ void Run(Scene* scene) {
 
     tpool_t *tpool = tpool_create(NO_THREADS);
     if (tpool == NULL) {
-        fprintf(stderr, "Failed to create thread pool.\nExiting...\n");
+        fprintf(stderr, "Failed to create thread pool.\nDefaulting to single core usage.");
     }
     else {
+    // tpool_t *tpool = NULL;
         while (!WindowShouldClose())
         {
             // Update Scene
-            (*scene->Update)(GetFrameTime());
+            if (scene->Update != NULL)
+                (*scene->Update)(GetFrameTime());
                     
             // Render Scene to target
             ClearCamera(scene->camera);
