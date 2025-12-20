@@ -29,7 +29,6 @@ float3 ViewToScreen(Camera* camera, float3 viewPoint);
 
 float3 Rotate3(float3 vec, float3 rot);
 float3 Transform3(float3 vec, M4x4 a);
-M4x4 MatMultiply(M4x4, M4x4);
 
 Camera *CreateCamera(int width, int height, float fov, float maxDistance);
 void DestroyCamera(Camera *camera);

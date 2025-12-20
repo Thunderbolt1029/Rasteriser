@@ -18,7 +18,6 @@ typedef struct {
 } Object;
 
 Object* LoadObjFile(const char* objFileName);
-char* ReadVertex(char* s, int* v, int* t, int* n);
 void FreeObject(Object* object);
 
 #endif

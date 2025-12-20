@@ -10,18 +10,18 @@
 #include "transform.h"
 #include "threadpool.h"
 
-void RenderObject(Camera *camera, Object* object, tpool_t *tpool);
-void RenderTri(Tri screenTri, Camera *camera, Object *object);
-void RenderPixel(int x, int y, Camera *camera, Object *object, Tri screenTri);
-Pixel PixelColour(Object* object, float2 texture, float3 normal);
-Tri triToScreen(Camera *camera, Transform transform, Tri tri, Tri *viewTri);
+static void RenderObject(Camera *camera, Object* object, tpool_t *tpool);
+static void RenderTri(Tri screenTri, Camera *camera, Object *object);
+static void RenderPixel(int x, int y, Camera *camera, Object *object, Tri screenTri);
+static Pixel PixelColour(Object* object, float2 texture, float3 normal);
+static Tri triToScreen(Camera *camera, Transform transform, Tri tri, Tri *viewTri);
 
 typedef struct {
     Camera* camera;
     Object* object;
     int i;
 } RenderObjectTriParam;
-void RenderObjectTri(void *arg);
+static void RenderObjectTri(void *arg);
 
 #define NEAR_CLIP_DIST 0.01f
 
@@ -33,7 +33,7 @@ void RenderScene(Scene* scene, tpool_t *tpool) {
     }
 }
 
-void RenderObject(Camera* camera, Object* object, tpool_t *tpool) {
+static void RenderObject(Camera* camera, Object* object, tpool_t *tpool) {
     for (int i = 0; i < object->triCount; i++) {
         RenderObjectTriParam *param = malloc(sizeof(RenderObjectTriParam));
         param->camera = camera;
@@ -43,7 +43,7 @@ void RenderObject(Camera* camera, Object* object, tpool_t *tpool) {
     }
 }
 
-void RenderObjectTri(void *arg) {
+static void RenderObjectTri(void *arg) {
     Camera* camera = ((RenderObjectTriParam *)arg)->camera;
     Object* object = ((RenderObjectTriParam *)arg)->object;
     int i = ((RenderObjectTriParam *)arg)->i;
@@ -138,7 +138,7 @@ void RenderObjectTri(void *arg) {
     }
 }
 
-void RenderTri(Tri screenTri, Camera *camera, Object *object) {
+static void RenderTri(Tri screenTri, Camera *camera, Object *object) {
     float minX = fminf(fminf(screenTri.vertex[0].x, screenTri.vertex[1].x), screenTri.vertex[2].x);
     float minY = fminf(fminf(screenTri.vertex[0].y, screenTri.vertex[1].y), screenTri.vertex[2].y);
     float maxX = fmaxf(fmaxf(screenTri.vertex[0].x, screenTri.vertex[1].x), screenTri.vertex[2].x);
@@ -152,7 +152,7 @@ void RenderTri(Tri screenTri, Camera *camera, Object *object) {
         RenderPixel(x, y, camera, object, screenTri);
 }
 
-void RenderPixel(int x, int y, Camera *camera, Object *object, Tri screenTri) {
+static void RenderPixel(int x, int y, Camera *camera, Object *object, Tri screenTri) {
     float3 weights;
     
     if (!PointInTriangle((float2){(float)x, (float)y}, IgnoreZ(screenTri.vertex[0]), IgnoreZ(screenTri.vertex[1]), IgnoreZ(screenTri.vertex[2]), &weights)) 
@@ -186,7 +186,7 @@ void RenderPixel(int x, int y, Camera *camera, Object *object, Tri screenTri) {
     pthread_mutex_unlock(&(camera->pixMutex[x][y]));
 }
 
-Pixel PixelColour(Object* object, float2 texture, float3 normal) {
+static Pixel PixelColour(Object* object, float2 texture, float3 normal) {
     float lightIntensity = (Dot3(normal, (float3){0, 1, 0}) + 1) * 0.5;
     lightIntensity = lerp(0, 1, lightIntensity);
     
@@ -209,7 +209,7 @@ Pixel PixelColour(Object* object, float2 texture, float3 normal) {
     return Vec3ToColour(Scale3(ColourToVec3(colour), lightIntensity));
 }
 
-Tri triToScreen(Camera *camera, Transform transform, Tri tri, Tri* viewTri) {
+static Tri triToScreen(Camera *camera, Transform transform, Tri tri, Tri* viewTri) {
     Tri screenTri = tri;
 
     if (viewTri == NULL) {

@@ -6,6 +6,20 @@
 #include "object.h"
 #include "list.h"
 
+static char* ReadVertex(char* s, int* v, int* t, int* n) {
+    char *next;
+    *v = strtol(s, &next, 10) - 1;
+    if (next[1] == '/') { 
+        *t = -1;
+        *n = strtol(next+2, &next, 10) - 1;
+    }
+    else {
+        *t = strtol(next+1, &next, 10) - 1;
+        *n = strtol(next+1, &next, 10) - 1;
+    }
+    return next;
+}
+
 Object* LoadObjFile(const char* objFileName) {
     FILE *fptr = fopen(objFileName, "r");
     if (fptr == NULL) {
@@ -130,20 +144,6 @@ Object* LoadObjFile(const char* objFileName) {
 
     fclose(fptr);
     return obj;
-}
-
-char* ReadVertex(char* s, int* v, int* t, int* n) {
-    char *next;
-    *v = strtol(s, &next, 10) - 1;
-    if (next[1] == '/') { 
-        *t = -1;
-        *n = strtol(next+2, &next, 10) - 1;
-    }
-    else {
-        *t = strtol(next+1, &next, 10) - 1;
-        *n = strtol(next+1, &next, 10) - 1;
-    }
-    return next;
 }
 
 void FreeObject(Object* object) {
