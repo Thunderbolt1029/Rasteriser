@@ -7,14 +7,15 @@
 #include "imgio.h"
 #include "threadpool.h"
 
+#ifndef NO_THREADS
 #define NO_THREADS 10
+#endif
 
 void Flatten(Pixel** TD, Color* OD, int width, int height);
 
 void Run(Scene* scene) {
     SetConfigFlags(/*FLAG_VSYNC_HINT | */FLAG_WINDOW_HIGHDPI);
 	InitWindow(1620, 1080, "Rasteriser");
-	// InitWindow(scene->camera->target->width, scene->camera->target->height, "Rasteriser");
 
     Image img = GenImageColor(scene->camera->target->width, scene->camera->target->height, BLACK);
     Texture2D texture = LoadTextureFromImage(img);
@@ -23,12 +24,15 @@ void Run(Scene* scene) {
 
     Color *texColBuffer = MemAlloc(sizeof(Color) * scene->camera->target->width * scene->camera->target->height);
 
+#if NO_THREADS == 1
+    tpool_t *tpool = NULL;
+#else
     tpool_t *tpool = tpool_create(NO_THREADS);
     if (tpool == NULL) {
         fprintf(stderr, "Failed to create thread pool.\nDefaulting to single core usage.");
     }
     else {
-    // tpool_t *tpool = NULL;
+#endif
         while (!WindowShouldClose())
         {
             // Update Scene
@@ -62,9 +66,10 @@ void Run(Scene* scene) {
             );
             EndDrawing();
         }
-     
+#if NO_THREADS > 1
         tpool_destroy(tpool);
     }
+#endif
 
     MemFree(texColBuffer);
     UnloadTexture(texture);

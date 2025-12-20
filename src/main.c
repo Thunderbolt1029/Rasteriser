@@ -18,7 +18,6 @@ int main()
 
     scene.camera = CreateCamera(540, 360, 90, 1000);
     scene.camera->transform = (Transform){ 0.00000f, 0.00000f, -7.75418f, 0.00000f, 0.00000f, 0.00000f, 1.00000f };
-    
 
     scene.noObjects = 4;
     Object *objects[scene.noObjects];
@@ -26,6 +25,7 @@ int main()
 
     objects[0] = LoadObjFile("assets/cube.obj");
     objects[0]->texture = ReadBMP("assets/CubeBoundsTexture.bmp");
+    objects[0]->transform.pos.y += 0.01f;
 
     objects[1] = LoadObjFile("assets/monkey.obj");
     objects[2] = LoadObjFile("assets/dragon.obj");

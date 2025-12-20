@@ -29,7 +29,7 @@ float3 ViewToScreen(Camera* camera, float3 localPoint) {
     return Add3(Scale3((float3){(float)camera->target->width, (float)camera->target->height, 0}, 0.5f), depthOffset);
 }
 
-M4x4 MatMultiply(M4x4 a, M4x4 b) {
+inline M4x4 MatMultiply(M4x4 a, M4x4 b) {
     return (M4x4){
         b._00*a._00 + b._10*a._01 + b._20*a._02 + b._30*a._03,
         b._01*a._00 + b._11*a._01 + b._21*a._02 + b._31*a._03,
@@ -53,7 +53,7 @@ M4x4 MatMultiply(M4x4 a, M4x4 b) {
     };
 }
 
-float3 Rotate3(float3 vec, float3 rot) {
+inline float3 Rotate3(float3 vec, float3 rot) {
     M4x4 xRot = { 1, 0, 0, 0, 0, cosf(rot.x), -sinf(rot.x), 0, 0, sinf(rot.x), cosf(rot.x), 0, 0, 0, 0, 1 };
     M4x4 yRot = { cosf(rot.y), 0, sinf(rot.y), 0, 0, 1, 0, 0, -sinf(rot.y), 0, cosf(rot.y), 0, 0, 0, 0, 1 };
     M4x4 zRot = { cosf(rot.z), sinf(rot.z), 0, 0, -sinf(rot.z), cosf(rot.z), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
@@ -61,7 +61,7 @@ float3 Rotate3(float3 vec, float3 rot) {
 
     return Transform3(vec, combRot);
 }
-float3 Transform3(float3 vec, M4x4 a) {
+inline float3 Transform3(float3 vec, M4x4 a) {
     return (float3){
         vec.x * a._00 + vec.y * a._10 + vec.z * a._20 + a._30,
         vec.x * a._01 + vec.y * a._11 + vec.z * a._21 + a._31,
