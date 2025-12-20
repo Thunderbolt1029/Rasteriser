@@ -3,17 +3,24 @@ CC     = gcc
 CFLAGS = -W -O
 LDLIBS = -lm
 
-SRC_FILES := $(wildcard src/*.c)
-OBJ_FILES := $(patsubst src/%.c,obj/%.o,$(SRC_FILES))
+EXEC = rasteriser
 
-rasteriser: $(OBJ_FILES) | output/
-	$(CC) $(LDFLAGS) $(LDLIBS) -o $@ $^ 
+SRC_DIR = src
+OBJ_DIR = obj
 
-obj/%.o: src/%.c | obj/
+SRC_FILES := $(wildcard $(SRC_DIR)/*.c)
+OBJ_FILES := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRC_FILES))
+
+all: $(EXEC)
+
+$(EXEC): $(OBJ_FILES)
+	$(CC) $(CFLAGS) $(LDLIBS) -o $@ $^ 
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(CC) -c -o $@ $^
 
-%/:
-	mkdir -p $@
+$(OBJ_DIR):
+	mkdir -p $(OBJ_DIR)
 
 clean:
-	rm -r obj/ rasteriser
+	rm -rf $(OBJ_DIR)/ $(EXEC)

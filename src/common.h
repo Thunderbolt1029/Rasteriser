@@ -3,7 +3,7 @@
 
 #include "imgio.h"
 
-#define PI 3.14159265359
+#define PI 3.14159265358979323846f
 
 #define ZERO2 (float2){0,0}
 #define ZERO3 (float3){0,0,0}
@@ -45,17 +45,20 @@ int Equal2(float2 a, float2 b);
 float LengthSquared2(float2 vec);
 float Dot2(float2, float2);
 float2 Perpendicular(float2);
+float2 Lerp2(float2 a, float2 b, float t);
 
 float3 Add3(float3 a, float3 b);
 float3 Sub3(float3 a, float3 b);
 float3 Scale3(float3 vec, float scale);
 int Equal3(float3 a, float3 b);
 float LengthSquared3(float3 vec);
+float Length3(float3 vec);
 float Dot3(float3, float3);
 float3 Inverse3(float3);
-float3 Normalise(float3);
+float3 Normalise3(float3);
 Pixel Vec3ToColour(float3);
 float3 ColourToVec3(Pixel col);
+float3 Lerp3(float3 a, float3 b, float t);
 
 float2 IgnoreZ(float3 vec);
 

@@ -3,7 +3,7 @@
 #include "transform.h"
 
 float3 LocalToWorld(Transform transform, float3 point) {
-    return Add3(Rotate3(point, transform.rot), transform.pos);
+    return Add3(Rotate3(Scale3(point, transform.scale), transform.rot), transform.pos);
 }
 
 float3 WorldToLocal(Transform transform, float3 point) {
@@ -12,12 +12,15 @@ float3 WorldToLocal(Transform transform, float3 point) {
     M4x4 zRot = { cosf(transform.rot.z), -sinf(transform.rot.z), 0, 0, sinf(transform.rot.z), cosf(transform.rot.z), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
     M4x4 combRot = MatMultiply(MatMultiply(zRot, yRot), xRot);
 
-    return Transform3(Sub3(point, transform.pos), combRot);
+    return Scale3(Transform3(Sub3(point, transform.pos), combRot), 1/transform.scale);
 }
 
 float3 WorldToScreen(Camera* camera, float3 worldPoint) {
     float3 localPoint = WorldToLocal(camera->transform, worldPoint);
+    return ViewToScreen(camera, localPoint);
+}
 
+float3 ViewToScreen(Camera* camera, float3 localPoint) {
     float screenWidth_world = tanf(camera->fov * PI / 360) * 2;
     float pixelsPerWorldUnit = (float)camera->target->width / screenWidth_world / localPoint.z;
     
@@ -78,14 +81,39 @@ Camera *CreateCamera(int width, int height, float fov, float maxDistance) {
         for (int y = 0; y < height; y++)
             cam->depth[x][y] = maxDistance;
 
-    cam->transform = (Transform){ 0, 0, 0, 0, 0, 0 };
+    cam->transform = (Transform){ 0, 0, 0, 0, 0, 0, 1 };
     cam->fov = fov;
     cam->maxDistance = maxDistance;
 
+    cam->pixMutex = malloc(sizeof(pthread_mutex_t*) * width);
+    for (int i = 0; i < width; i++)
+        cam->pixMutex[i] = malloc(sizeof(pthread_mutex_t) * height);    
+    for (int x = 0; x < width; x++)
+        for (int y = 0; y < height; y++)
+            pthread_mutex_init(&(cam->pixMutex[x][y]), NULL);
+
     return cam;
 }
-void DestroyCamera(Camera *camera) {
-    free(camera->target);
-    free(camera->depth);
-    free(camera);
+void DestroyCamera(Camera *cam) {
+    for (int x = 0; x < cam->target->width; x++)
+        for (int y = 0; y < cam->target->height; y++)
+            pthread_mutex_destroy(&(cam->pixMutex[x][y]));
+    for (int i = 0; i < cam->target->width; i++)
+        free(cam->pixMutex[i]); 
+    free(cam->pixMutex);
+
+    for (int i = 0; i < cam->target->width; i++)
+        free(cam->depth[i]);
+    free(cam->depth);
+
+    FreeImage(cam->target);
+    free(cam);
+}
+
+void ClearCamera(Camera *camera) {
+    for (int x = 0; x < camera->target->width; x++)
+    for (int y = 0; y < camera->target->height; y++) {
+        camera->target->image[x][y] = (Pixel) { 0, 0, 0 };
+        camera->depth[x][y] = camera->maxDistance;
+    }
 }
